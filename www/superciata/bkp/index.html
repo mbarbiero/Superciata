@@ -1,0 +1,93 @@
+<!-- header.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUPERCIATA - Georreferenciamento Municipal</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+    }
+    header img {
+      height: 60px;
+      margin-right: 15px;
+    }
+    header h1 {
+      font-size: 1.8rem;
+    }
+    nav {
+      background-color: #0055a5;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      margin-top: auto;
+      background-color: #003366;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    footer a {
+      color: #ffcc00;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- Logo melhorada em SVG (mapa estilizado) -->
+    <img src="data:image/svg+xml;utf8,
+      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+        <rect width='200' height='200' rx='20' ry='20' fill='%230055a5'/>
+        <path d='M40 160 L80 40 L120 160 L160 60' stroke='white' stroke-width='8' fill='none'/>
+        <circle cx='80' cy='40' r='10' fill='white'/>
+        <circle cx='120' cy='160' r='10' fill='white'/>
+        <circle cx='40' cy='160' r='10' fill='white'/>
+        <circle cx='160' cy='60' r='10' fill='white'/>
+        <text x='50%' y='95%' font-size='40' fill='white' font-family='Arial' text-anchor='middle'>S</text>
+      </svg>" alt="Logo SUPERCIATA">
+    <h1>SUPERCIATA - Georreferenciamento Municipal</h1>
+  </header>
+
+  <nav>
+    <a href="http://superciata.smuu.com.br/CentroideQuadrasCnefe.html">Quadras CNEFE</a>
+    <a href="http://superciata.smuu.com.br/CentroideFacesCnefe.html">Faces CNEFE</a>
+    <a href="http://superciata.smuu.com.br/CadastroCIATA.html">Cadastro Municipal</a>
+    <a href="http://superciata.smuu.com.br/MapasSuperciata.html">Geo das Quadras</a>
+    <a href="/index.html#sobre">Sobre</a>
+  </nav>
+
+  <footer>
+    <p>&copy; 2025 SUPERCIATA - Georreferenciamento Municipal</p>
+    <p><a href="/index.html">Voltar</a></p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linha do Tempo — SuperCIATA</title>
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --view-color: #6cb4ee;
+      --done: #111;
+      --text: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    .timeline-container {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .timeline-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .step {
+      width: 240px;
+      padding: 24px 16px;
+      border-radius: 12px;
+      background: var(--brand-light);
+      color: var(--text);
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step.view {
+      background: var(--view-color);
+      cursor: pointer;
+    }
+
+    .step.done {
+      background: var(--done) !important;
+      color: #fff !important;
+    }
+
+    .step.disabled {
+      background: #ccc !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
+
+    .arrow {
+      font-size: 24px;
+      color: var(--brand-dark);
+      margin: 0 5px;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: #444;
+      font-size: 18px;
+    }
+
+    .report {
+      margin-top: 40px;
+      padding: 16px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      min-height: 120px;
+      max-height: 300px; /* altura máxima */
+      overflow-y: auto;  /* rolagem vertical */
+      background: #f9f9f9;
+      font-size: 14px;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .file-input-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .file-input-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      width: 400px;
+      max-width: 90%;
+    }
+
+    .file-input-box h2 {
+      margin-bottom: 20px;
+      color: var(--brand-dark);
+    }
+
+    .file-input-box input[type="file"] {
+      margin: 15px 0;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .file-input-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .file-input-buttons button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .file-input-buttons button:first-child {
+      background: var(--brand-light);
+      color: white;
+    }
+
+    .file-input-buttons button:last-child {
+      background: #ddd;
+      color: #333;
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 40px 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: auto;
+    }
+
+    @media (max-width: 900px) {
+      .timeline-row {
+        flex-direction: column;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+        margin: 5px 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+    </div>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="javascript:history.back()">Voltar</a>
+    </nav>
+  </header>
+
+  <main class="timeline-container">
+    <h1 style="text-align:center; margin-bottom:40px;">Linha do Tempo Processar CNEFE</h1>
+
+    <div class="timeline">
+      <div>
+        <div class="timeline-row">
+          <div class="step" id="step1" onclick="openFileInput()">Carregar Arquivo CNEFE</div>
+          <div class="arrow">➔</div>
+          <div class="step" id="step2" onclick="preparaCN_PONTOS_UNICOS()">Pontos Únicos</div>
+          <div class="arrow">➔</div>
+          <div class="step" id="step3" onclick="geraCN_QUADRAS()">Gerar Quadras CNEFE</div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-title">VISUALIZAÇÃO</h3>
+        <div class="timeline-row">
+          <div class="step view" id="view1" onclick="openPage('Mapa.html?page=PontosUnicos_CNEFE.html')">Visualizar Pontos</div>
+          <div class="step view disabled" id="view2" onclick="openPage('CentroideQuadras_CNEFE.html')">Centroides das Quadras</div>
+          <div class="step view disabled" id="view3" onclick="openPage('CentroideFaces_CNEFE.html')">Centroides das Faces</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report" id="report">
+      Relatório de execução aparecerá aqui.
+    </div>
+  </main>
+
+  <div class="file-input-container" id="fileInputContainer">
+    <div class="file-input-box">
+      <h2>Carregar Arquivo CNEFE</h2>
+      <p>Selecione um arquivo ZIP contendo os dados do CNEFE</p>
+      <input type="file" id="cnefeFile" accept=".zip" />
+      <div class="file-input-buttons">
+        <button onclick="processFile()">Processar Arquivo</button>
+        <button onclick="closeFileInput()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © <span id="year"></span> Superciata — Geoespacialização Urbana
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function openFileInput() {
+      document.getElementById('fileInputContainer').style.display = 'flex';
+    }
+
+    function closeFileInput() {
+      document.getElementById('fileInputContainer').style.display = 'none';
+      document.getElementById('cnefeFile').value = '';
+    }
+
+    // Função centralizada para adicionar mensagens ao relatório
+    function addReportMessage(message) {
+      const reportEl = document.getElementById("report");
+      if (!reportEl) return;
+
+      const p = document.createElement("div");
+      p.textContent = message;
+
+      reportEl.appendChild(p);
+      reportEl.scrollTop = reportEl.scrollHeight;
+    }
+
+    async function processFile() {
+      const fileInput = document.getElementById("cnefeFile");
+      const uploadBtn = document.querySelector(".file-input-buttons button:first-child");
+
+      if (!fileInput || !fileInput.files.length) {
+        alert("Selecione um arquivo .zip primeiro!");
+        return;
+      }
+
+      const file = fileInput.files[0];
+
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        alert("Por favor, selecione um arquivo .zip!");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("arqCnefe", file);
+
+      try {
+        addReportMessage("Enviando arquivo...");
+        if (uploadBtn) {
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "Enviando...";
+        }
+
+        let response = await fetch("https://smuu.com.br:21079/carrega_CNEFE", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro HTTP: ${response.status} ${response.statusText}\n${errorText}`);
+        }
+
+        let nmArquivoCSV = file.name.replace(/\.zip/i, '.csv');
+        addReportMessage("Arquivo CSV esperado: " + nmArquivoCSV);
+        const cod_municipio = nmArquivoCSV.substring(0, 7); // Código do município do IBGE com 7 algarismos
+
+        response = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS?arquivo=${encodeURIComponent(nmArquivoCSV)}`, {
+          method: "GET"
+        });
+
+        const data = await response.json();
+        addReportMessage("Upload realizado com sucesso:\n" + JSON.stringify(data, null, 2));
+
+        await preparaCN_PONTOS_UNICOS(cod_municipio);
+
+        markDone(1);
+        closeFileInput();
+
+      } catch (err) {
+        console.error("Erro detalhado:", err);
+
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+          addReportMessage("⚠️ Erro de conexão. Detalhes: " + err.message);
+        } else {
+          addReportMessage("⚠️ Falha ao enviar arquivo: " + err.message);
+        }
+      } finally {
+        if (uploadBtn) {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = "Processar Arquivo";
+        }
+      }
+    }
+
+    async function preparaCN_PONTOS_UNICOS(cod_municipio) {
+      addReportMessage("Preparando CN_PONTOS_UNICOS...");
+      await criaCN_PONTOS_UNICOS();
+      await preencheCN_PONTOS_UNICOS(cod_municipio);
+      // markDone(2);
+    }
+
+    async function criaCN_PONTOS_UNICOS() {
+      addReportMessage("Criando tabela CN_PONTOS_UNICOS...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS_UNICOS`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function preencheCN_PONTOS_UNICOS(cod_municipio) {
+      addReportMessage("Preenchendo CN_PONTOS_UNICOS...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS_UNICOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function geraCN_QUADRAS() {
+      addReportMessage("Gerando Quadras CNEFE...");
+      await criaCN_PONTOS_UNICOS();
+      await preencheCN_PONTOS_UNICOS();
+      markDone(3);
+    }
+
+    function markDone(step) {
+      const el = document.getElementById(`step${step}`);
+      if (el) {
+        el.classList.add("done");
+        addReportMessage(`✔️ Etapa concluída: ${el.innerText}`);
+      }
+
+      if (step === 3) {
+        ["view1", "view2", "view3"].forEach(id => {
+          const box = document.getElementById(id);
+          if (box) {
+            box.classList.remove("disabled");
+          }
+        });
+      }
+    }
+
+    function openPage(url) {
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>

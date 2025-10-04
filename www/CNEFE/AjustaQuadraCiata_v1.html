@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Rotacionar quadrilátero</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+</head>
+
+<body>
+  <div id="map" style="height: 100vh;"></div>
+
+  <script>
+    const polygonCoords = [
+      { lat: -19.616918270694832, lng: -43.212874368654326 },
+      { lat: -19.617546780494834, lng: -43.212743558254324 },
+      { lat: -19.61779388610517, lng: -43.21400399734568 },
+      { lat: -19.617165376305167, lng: -43.21413480774568 }
+    ];
+
+    const map = L.map("map").setView([-19.6171, -43.2135], 18);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 22,
+      attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    const polygon = L.polygon(polygonCoords, {
+      color: "blue",
+      fillOpacity: 0.4
+    }).addTo(map);
+
+    // Centro do polígono
+    function getCentroid(coords) {
+      let latSum = 0, lngSum = 0;
+      coords.forEach(p => {
+        latSum += p.lat;
+        lngSum += p.lng;
+      });
+      return {
+        lat: latSum / coords.length,
+        lng: lngSum / coords.length
+      };
+    }
+
+    // Rotacionar ponto em torno do centro
+    function rotatePoint(p, center, angleDeg) {
+      const angle = (angleDeg * Math.PI) / 180;
+      const lat = p.lat - center.lat;
+      const lng = p.lng - center.lng;
+      const rotatedLat = lat * Math.cos(angle) - lng * Math.sin(angle);
+      const rotatedLng = lat * Math.sin(angle) + lng * Math.cos(angle);
+
+      return {
+        lat: rotatedLat + center.lat,
+        lng: rotatedLng + center.lng
+      };
+    }
+
+    // Calcular o ângulo da Rua das Violetas via Overpass API
+    const overpassUrl = "https://overpass-api.de/api/interpreter";
+    const query = `
+      [out:json];
+      way["name"="Rua das Violetas"](around:300,-19.6171,-43.2135);
+      out geom;
+    `;
+
+    fetch(overpassUrl, {
+      method: "POST",
+      body: query
+    })
+      .then(res => res.json())
+      .then(data => {
+        const way = data.elements.find(el => el.type === "way");
+        if (!way) {
+          alert("Rua das Violetas não encontrada.");
+          return;
+        }
+
+        // Cálculo de ângulo médio entre todos os segmentos da via
+        let totalAngle = 0;
+        let count = 0;
+
+        for (let i = 0; i < way.geometry.length - 1; i++) {
+          const a = way.geometry[i];
+          const b = way.geometry[i + 1];
+          const dy = b.lat - a.lat;
+          const dx = b.lon - a.lon;
+          const angleRad = Math.atan2(dy, dx);          
+          totalAngle += angleRad;
+          count++;
+        }
+
+        let angle = (totalAngle / count) * (180 / Math.PI);
+
+        console.log("Inclinação da rua (°):", angle.toFixed(2));
+
+        angle = -164.02;
+
+        // Rotacionar o polígono original
+        const center = getCentroid(polygonCoords);
+        const rotated = polygonCoords.map(p => rotatePoint(p, center, -angle)); // ROTAÇÃO INVERTIDA
+        // const rotated = polygonCoords.map(p => rotatePoint(p, center, angle));
+
+        L.polygon(rotated, {
+          color: "red",
+          fillOpacity: 0.3
+        }).addTo(map);
+      })
+      .catch(err => {
+        console.error("Erro na consulta Overpass:", err);
+      });
+  </script>
+</body>
+
+</html>

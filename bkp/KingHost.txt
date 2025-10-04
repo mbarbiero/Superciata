@@ -1,0 +1,12 @@
+Este problema é um tanto desafiador.
+Preciso carregar arquivos CSV relativamente grandes no meu banco de dados MySQL. 
+Por isso, gostaria de enviar os arquivos compactados para o servidor e executar um LOAD DATA INFILE '/home/smuu/arquivos/temp/4301800_BARRACAO.csv'.
+
+1 - usando uma app node.js, movo um arquivo da máquina cliente (via web) para a pasta /home/smuu/arquivos/temp/;
+2 - A aplicação node.js e a pasta estão no servidor nodejsng1f02.kinghost.net. As permissões da pasta e do arquivo estão definidas como 777
+3 - Executo o LOAD DATA INFILE e recebo o erro "Error Code: 1045. Access denied for user 'smuu'@'%' (using password: YES)"
+4 - O servidor MySQL é o mysql27-farm1.kinghost.net.
+5 - As permissões no MySQL estão assim: 'GRANT ALL PRIVILEGES ON `smuu`.* TO \'smuu\'@\'%\''
+
+Alguma sugestão?
+

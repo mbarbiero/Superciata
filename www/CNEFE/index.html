@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Geoprocessamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .intro {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .services {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+        }
+        
+        .service-card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            width: 280px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .service-card h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .service-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #2c3e50;
+            color: white;
+            margin-top: 30px;
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="logo SUPERCIATA.png" alt="Logo" class="logo">
+        <h1>Portal do projeto SuperCiata</h1>
+        <p>Ferramentas e serviços CNEFE/CIATA</p>
+    </header>
+    
+    <div class="container">
+        <div class="intro">
+            <h2>Bem-vindo ao nosso portal do projeto SuperCiata</h2>
+            <p>Ferramentas para análise, integração e visualização dos dados do CNEFE e CIATA.</p>
+        </div>
+        
+        <div class="services">
+            <div class="service-card">
+                <h3>Pontos de Endereço</h3>
+                <p>Visualização e análise de pontos de endereço georreferenciados do CNEFE.</p>
+                <a href="https://smuu.com.br/CNEFE/PontosEnderecos.html" class="btn">Acessar</a>
+            </div>
+            
+            <div class="service-card">
+                <h3>Centroides de Faces</h3>
+                <p>Mapa interativo com os centroides das faces de quadras do CNEFE.</p>
+                <a href="https://smuu.com.br/CNEFE/CentroideFacesCnefe.html" class="btn">Acessar</a>
+            </div>
+            
+            <div class="service-card">
+                <h3>Centroides de Quadras</h3>
+                <p>Visualização dos pontos centrais das quadras urbanas do CNEFE.</p>
+                <a href="https://smuu.com.br/CNEFE/CentroideQuadrasCnefe.html" class="btn">Acessar</a>
+            </div>
+            
+            <div class="service-card">
+                <h3>Polígonos de Quadras</h3>
+                <p>Mapa com a representação poligonal das quadras do CNEFE.</p>
+                <a href="https://smuu.com.br/CNEFE/PoligonoQuadrasCnefe.html" class="btn">Acessar</a>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Portal SuperCiata. Todos os direitos reservados.</p>
+    </footer>
+</body>
+</html>

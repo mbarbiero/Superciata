@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Mapa Principal</title>
+
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+   <style>
+      html,
+      body {
+         height: 100%;
+         margin: 0;
+         padding: 0;
+         font-family: Arial, sans-serif;
+         display: flex;
+         flex-direction: column;
+         overflow: hidden;
+      }
+
+      header {
+         padding: 10px 15px;
+         background-color: #f8f8f8;
+         border-bottom: 1px solid #eee;
+         flex-shrink: 0;
+      }
+
+      header h1 {
+         margin: 0;
+         font-size: 1.2em;
+         color: #004aad;
+      }
+
+      #mapa {
+         flex-grow: 1;
+         width: 100%;
+      }
+   </style>
+</head>
+
+<body>
+
+   <header>
+      <h1>Pontos Únicos CNEFE</h1>
+   </header>
+
+   <div id="mapa"></div>
+
+   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+   <script>
+      // Inicializa o mapa
+      const mapa = L.map('mapa').setView([-15.78, -47.93], 5);
+
+      // Camadas base
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+         maxZoom: 19,
+         attribution: '&copy; OpenStreetMap'
+      });
+
+      const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+         maxZoom: 19,
+         attribution: 'Tiles © Esri'
+      });
+
+      osm.addTo(mapa);
+
+      // Controle para alternar camadas
+      L.control.layers({
+         "Mapa de Ruas (OSM)": osm,
+         "Imagem de Satélite": satelite
+      }).addTo(mapa);
+
+      // Extrair cod_municipio da URL
+      const params = new URLSearchParams(window.location.search);
+      const codMunicipio = params.get("cod_municipio");
+
+      // Função para converter "POINT(lon lat)" em [lat, lon]
+      function parseCoords(coords) {
+         const match = coords.match(/POINT\(([-0-9.]+) ([-0-9.]+)\)/);
+         if (match) {
+            const lon = parseFloat(match[1]);
+            const lat = parseFloat(match[2]);
+            return [lat, lon];
+         }
+         return null;
+      }
+
+      // Ícone reduzido pela metade
+      const smallIcon = L.icon({
+         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+         iconSize: [12, 20], // metade do padrão (25x41)
+         iconAnchor: [6, 20], // ajustado para o novo tamanho
+         popupAnchor: [1, -18],
+         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+         shadowSize: [20, 20]
+      });
+
+      // Buscar e carregar pontos no mapa
+      async function carregarPontos(codMunicipio) {
+         if (!codMunicipio) {
+            alert("⚠️ Nenhum cod_municipio informado na URL.");
+            return;
+         }
+
+         try {
+            const url = `https://smuu.com.br:21079/superciata/retorna_CN_PONTOS_UNICOS?cod_municipio=${codMunicipio}`;
+            const resp = await fetch(url);
+            const dados = await resp.json();
+
+            const markers = [];
+
+            dados.forEach(ponto => {
+               const coords = parseCoords(ponto.COORDS);
+               if (!coords) return;
+
+               const endereco = `${ponto.NOM_LOGRADOURO || ""}, ${ponto.NUM_ENDERECO || ""}`.trim();
+
+               const marker = L.marker(coords, { icon: smallIcon }).addTo(mapa);
+               marker.bindPopup(`
+                  <b>Endereço:</b> ${endereco}<br>
+                  <b>Lat:</b> ${coords[0]}<br>
+                  <b>Lng:</b> ${coords[1]}
+               `);
+
+               markers.push(marker);
+            });
+
+            if (markers.length > 0) {
+               const group = L.featureGroup(markers);
+               mapa.fitBounds(group.getBounds().pad(0.2));
+            }
+
+         } catch (e) {
+            console.error("Erro ao carregar pontos:", e);
+         }
+      }
+
+      carregarPontos(codMunicipio || '4301800');
+   </script>
+
+</body>
+</html>

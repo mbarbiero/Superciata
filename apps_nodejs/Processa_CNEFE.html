@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linha do Tempo — SuperCIATA</title>
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --view-color: #6cb4ee;
+      /* Azul claro para visualização */
+      --done: #111;
+      --text: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    .timeline-container {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .timeline-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .step {
+      width: 240px;
+      padding: 24px 16px;
+      border-radius: 12px;
+      background: var(--brand-light);
+      color: var(--text);
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step.view {
+      background: var(--view-color);
+      cursor: pointer;
+    }
+
+    .step.done {
+      background: var(--done) !important;
+      color: #fff !important;
+    }
+
+    .step.disabled {
+      background: #ccc !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
+
+    .arrow {
+      font-size: 24px;
+      color: var(--brand-dark);
+      margin: 0 5px;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: #444;
+      font-size: 18px;
+    }
+
+    .report {
+      margin-top: 40px;
+      padding: 16px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      min-height: 80px;
+      background: #f9f9f9;
+      font-size: 14px;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .file-input-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .file-input-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      width: 400px;
+      max-width: 90%;
+    }
+
+    .file-input-box h2 {
+      margin-bottom: 20px;
+      color: var(--brand-dark);
+    }
+
+    .file-input-box input[type="file"] {
+      margin: 15px 0;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .file-input-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .file-input-buttons button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .file-input-buttons button:first-child {
+      background: var(--brand-light);
+      color: white;
+    }
+
+    .file-input-buttons button:last-child {
+      background: #ddd;
+      color: #333;
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 40px 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: auto;
+    }
+
+    @media (max-width: 900px) {
+      .timeline-row {
+        flex-direction: column;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+        margin: 5px 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+    </div>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="javascript:history.back()">Voltar</a>
+    </nav>
+  </header>
+
+  <main class="timeline-container">
+    <h1 style="text-align:center; margin-bottom:40px;">Linha do Tempo Processar CNEFE</h1>
+
+    <div class="timeline">
+      <!-- Primeira linha: Processamento (sem título) -->
+      <div>
+        <div class="timeline-row">
+          <div class="step" id="step1" onclick="openFileInput()">Carregar Arquivo CNEFE</div>
+          <div class="arrow">➔</div>
+          <div class="step" id="step2" onclick="markDone(2)">Importar Dados do CNEFE</div>
+          <div class="arrow">➔</div>
+          <div class="step" id="step3" onclick="markDone(3)">Gerar Centroides dos Endereços</div>
+        </div>
+      </div>
+
+      <!-- Segunda linha: Visualização -->
+      <div>
+        <h3 class="section-title">VISUALIZAÇÃO</h3>
+        <div class="timeline-row">
+          <div class="step view" id="view1" onclick="openPage('CentroidePontos_CNEFE.html')">Visualizar Pontos</div>
+          <div class="step view" id="view2" onclick="openPage('CentroideQuadras_CNEFE.html')">Centroides das Quadras
+          </div>
+          <div class="step view" id="view3" onclick="openPage('CentroideFaces_CNEFE.html')">Centroides das Faces</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report" id="report">
+      Relatório de execução aparecerá aqui.
+    </div>
+  </main>
+
+  <div class="file-input-container" id="fileInputContainer">
+    <div class="file-input-box">
+      <h2>Carregar Arquivo CNEFE</h2>
+      <p>Selecione um arquivo ZIP contendo os dados do CNEFE</p>
+      <input type="file" id="cnefeFile" accept=".zip" />
+      <div class="file-input-buttons">
+        <button onclick="processFile()">Processar Arquivo</button>
+        <button onclick="closeFileInput()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © <span id="year"></span> Superciata — Geoespacialização Urbana
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function openFileInput() {
+      document.getElementById('fileInputContainer').style.display = 'flex';
+    }
+
+    function closeFileInput() {
+      document.getElementById('fileInputContainer').style.display = 'none';
+      document.getElementById('cnefeFile').value = '';
+    }
+
+    async function processFile() {
+      const fileInput = document.getElementById("cnefeFile");
+      const reportEl = document.getElementById("report");
+      const uploadBtn = document.querySelector(".file-input-buttons button:first-child");
+
+      if (!fileInput || !fileInput.files.length) {
+        alert("Selecione um arquivo .zip primeiro!");
+        return;
+      }
+
+      const file = fileInput.files[0];
+
+      // Verificar se é um arquivo ZIP
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        alert("Por favor, selecione um arquivo .zip!");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("upload-cnefe", file);
+
+      try {
+        if (reportEl) reportEl.textContent = "⏳ Enviando arquivo...";
+        if (uploadBtn) {
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "Enviando...";
+        }
+
+        // CORREÇÃO: Usar HTTP em vez de HTTPS
+        const response = await fetch("http://smuu.com.br:21067/carrega-cnefe", {
+          method: "POST",
+          body: formData
+          // Removido headers para evitar problemas de CORS
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro HTTP: ${response.status} ${response.statusText}\n${errorText}`);
+        }
+
+        const data = await response.json();
+        if (reportEl) {
+          reportEl.textContent = "✅ Upload realizado com sucesso:\n" + JSON.stringify(data, null, 2);
+        }
+
+        // Marcar a etapa 1 como concluída
+        markDone(1);
+        closeFileInput();
+
+      } catch (err) {
+        console.error("Erro detalhado:", err);
+
+        if (reportEl) {
+          if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+            reportEl.textContent = "⚠️ Erro de conexão. Possíveis causas:\n- Servidor offline\n- Porta bloqueada\n- Problema de rede\n\nDetalhes: " + err.message;
+          } else {
+            reportEl.textContent = "⚠️ Falha ao enviar arquivo: " + err.message;
+          }
+        }
+      } finally {
+        if (uploadBtn) {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = "Processar Arquivo";
+        }
+      }
+    }
+
+    function markDone(step) {
+      const el = document.getElementById(`step${step}`);
+      if (el) {
+        el.classList.add("done");
+
+        // Atualizar o relatório apenas para etapas não relacionadas ao upload
+        if (step !== 1) {
+          const reportEl = document.getElementById("report");
+          if (reportEl) {
+            reportEl.innerText = `Etapa concluída: ${el.innerText}`;
+          }
+        }
+
+        // Ativar visualizações quando a etapa 3 for concluída
+        if (step === 3) {
+          ["view1", "view2", "view3"].forEach(id => {
+            const box = document.getElementById(id);
+            if (box) {
+              box.classList.remove("disabled");
+            }
+          });
+        }
+      }
+    }
+
+    function openPage(url) {
+      window.open(url, '_blank');
+    }
+
+    // Adicionar event listener para o input de arquivo
+    document.addEventListener('DOMContentLoaded', function () {
+      const fileInput = document.getElementById('cnefeFile');
+      if (fileInput) {
+        fileInput.addEventListener('change', function () {
+          if (this.files.length > 0) {
+            const fileName = this.files[0].name;
+            // Adiciona visualização do nome do arquivo se necessário
+            console.log("Arquivo selecionado:", fileName);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

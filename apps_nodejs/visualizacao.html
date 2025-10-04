@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Superciata — Mapa de Georreferenciamento</title>
+   <meta name="description"
+      content="Visualização geoespacial das quadras urbanas com base no CNEFE e cadastro territorial." />
+   <style>
+      :root {
+         --bg: #fff;
+         --muted: #444;
+         --brand: #004aad;
+         --text: #111;
+         --ring: rgba(0, 74, 173, .35);
+      }
+
+      * {
+         box-sizing: border-box;
+         margin: 0;
+         padding: 0;
+      }
+
+      html,
+      body {
+         width: 100%;
+         height: 100%;
+         font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg);
+         color: var(--text);
+         overflow: hidden; /* Remove barras de rolagem da página principal */
+      }
+
+      a {
+         color: inherit;
+         text-decoration: none;
+      }
+
+      /* Header */
+      header {
+         background: #fff;
+         border-bottom: 1px solid #eee;
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         z-index: 1000;
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         padding: 12px 40px;
+         height: 70px;
+      }
+
+      header .logo img {
+         height: 48px;
+         width: auto;
+      }
+
+      nav a {
+         margin-left: 24px;
+         color: #222;
+         text-decoration: none;
+         font-size: 15px;
+         font-weight: 500;
+      }
+
+      nav a:hover {
+         color: #0073e6;
+      }
+
+      /* Map Section - Ocupa todo o espaço restante */
+      .map-section {
+         position: fixed;
+         top: 70px; /* Abaixo do header */
+         left: 0;
+         width: 100%;
+         height: calc(100% - 70px); /* Altura total menos a altura do header */
+         background: #eef6ff;
+         border: none;
+      }
+
+      .map-frame {
+         width: 100%;
+         height: 100%;
+         border: none;
+         display: block;
+      }
+
+      /* Footer oculto */
+      footer {
+         display: none;
+      }
+
+      /* Focus */
+      a:focus-visible,
+      button:focus-visible {
+         outline: 2px solid var(--ring);
+         outline-offset: 2px;
+      }
+   </style>
+</head>
+
+<body>
+   <header>
+      <div class="logo">
+         <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+      </div>
+
+      <nav>
+         <a href="javascript:history.back()">Voltar</a>
+         <a href="index.html">Início</a>
+      </nav>
+   </header>
+
+   <!-- Mapa -->
+   <section class="map-section" id="mapa">
+      <iframe class="map-frame" src="http://superciata.smuu.com.br/CentroideQuadrasCnefe.html"
+         title="Mapa de Georreferenciamento" frameborder="0"></iframe>
+   </section>
+
+   <!-- Footer oculto -->
+   <footer>
+      © <span id="year"></span> Superciata — Geoespacialização Urbana
+   </footer>
+
+   <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+      
+      // Garantir que não haja overflow em nenhum elemento
+      document.querySelectorAll('*').forEach(el => {
+         el.style.overflow = 'hidden';
+      });
+   </script>
+</body>
+
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Superciata — Documentos</title>
+   <style>
+      body {
+         font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+         margin: 0;
+         background: #f9f9f9;
+         color: #111;
+      }
+
+      header {
+         background: #fff;
+         border-bottom: 1px solid #eee;
+         padding: 12px 30px;
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+      }
+
+      header .logo img {
+         height: 42px;
+      }
+
+      main {
+         max-width: 800px;
+         margin: 40px auto;
+         padding: 0 20px;
+      }
+
+      h1 {
+         font-size: 28px;
+         margin-bottom: 20px;
+         text-align: center;
+         color: #004aad;
+      }
+
+      ul {
+         list-style: none;
+         padding: 0;
+      }
+
+      li {
+         margin: 18px 0;
+         padding: 16px;
+         border: 1px solid #ddd;
+         border-radius: 8px;
+         background: #fff;
+         transition: 0.2s ease-in-out;
+      }
+
+      li:hover {
+         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+         transform: translateY(-2px);
+      }
+
+      a {
+         text-decoration: none;
+         color: #004aad;
+         font-weight: 500;
+         font-size: 16px;
+      }
+
+      footer {
+         background: #111;
+         color: #aaa;
+         text-align: center;
+         padding: 30px 20px;
+         margin-top: 50px;
+         font-size: 14px;
+      }
+   </style>
+</head>
+
+<body>
+   <header>
+      <div class="logo">
+         <a href="index.html">
+            <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA">
+         </a>
+      </div>
+      <nav>
+         <a href="index.html" style="margin-left:20px; color:#004aad; font-weight:500">← Voltar</a>
+      </nav>
+   </header>
+
+   <main>
+      <h1>📄 Documentos</h1>
+      <ul>
+         <li>
+            <a href="docs/ProjetoCiata_ManualCadastroImobiliario_OCR.pdf" target="_blank">
+               Projeto CIATA — Manual de Cadastro Imobiliário (OCR)
+            </a>
+         </li>
+         <li>
+            <a href="docs/Georrreferenciamento de parcelas urbanas usando cadastro urbano e CNEFE.pdf" target="_blank">
+               Georreferenciamento de Parcelas Urbanas com Cadastro Urbano e CNEFE
+            </a>
+         </li>
+      </ul>
+   </main>
+
+   <footer>
+      © <span id="year"></span> Superciata — Geoespacialização Urbana
+   </footer>
+   <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+   </script>
+</body>
+
+</html>

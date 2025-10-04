@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Centroide das Faces - GeoJSON</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 100vh;
+    }
+
+    #formulario {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="formulario">
+    <label for="codMunicipio">Código do Município:</label>
+    <input type="text" id="COD_MUNICIPIO" value="3131703" />
+    <button onclick="carregarGeoJSON()">Carregar GeoJSON</button>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map', {
+      center: [-19.61767, -43.21337],
+      zoom: 4,
+      layers: []
+    });
+
+    const emptyBasemap = L.layerGroup([]);
+
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+    });
+
+    const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+    });
+
+    const googleRoads = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+    });
+
+    const baseLayers = {
+      "OpenStreetMap": osmLayer,
+      "Google Maps": googleRoads,
+      "Google Satellite": googleSat,
+      "Google Hybrid": googleHybrid,
+      "Sem mapa base": emptyBasemap
+    };
+
+    L.control.layers(baseLayers).addTo(map);
+
+    let camadaGeojson = null;
+ 
+    /*  ATENÇÃO
+        No GeoJSON a ordem das coordenadas é LONGITUDE, LATITUDE
+    */
+    function carregarGeoJSON() {
+      const COD_MUNICIPIO = document.getElementById("COD_MUNICIPIO").value;
+
+      fetch(`http://smuu.com.br:21067/superciata/retCentroideFaces?COD_MUNICIPIO=${COD_MUNICIPIO}`)
+        .then(response => {
+          if (!response.ok) throw new Error("Erro ao buscar GeoJSON");
+          return response.json();
+        })
+        .then(geojson => {
+          if (camadaGeojson) {
+            map.removeLayer(camadaGeojson);
+          }
+
+          camadaGeojson = L.geoJSON(geojson, {                
+            onEachFeature: function (feature, layer) {
+              const props = feature.properties;
+              const popup = `
+                <strong>Quadra:</strong> ${props.num_quadra}<br/>
+                <strong>Face:</strong> ${props.num_face}<br/>
+                <strong>Coords:</strong> ${props.coords[1]}, ${props.coords[0]}<br/>    
+                <strong>Logradouro:</strong> ${props.tipo_logradouro || ''} ${props.nom_logradouro || ''}
+              `;
+              layer.bindPopup(popup);
+            },
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, {
+                radius: 6,
+                fillColor: "#ff0000",
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+              });
+            }
+          }).addTo(map);
+
+          if (geojson.features.length > 0) {
+            if (COD_MUNICIPIO==='3131703'){
+              map.setView([-19.61767, -43.21337], 18);
+            }
+            else {
+              const bounds = camadaGeojson.getBounds();
+              map.fitBounds(bounds);
+            }
+          } else {
+            alert("Nenhum dado encontrado para o código informado.");
+          }
+        })
+        .catch(error => {
+          console.error(error);
+          alert("Erro ao carregar os dados GeoJSON.");
+        });
+    }
+  </script>
+</body>
+
+</html>
