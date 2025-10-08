@@ -1,0 +1,57 @@
+-- Criar a tabela FACES sem índice espacial 
+-- O índice só será criado quando ela estiver completamente preenchida
+CREATE TABLE CNEFE_FACES (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  NUM_QUADRA VARCHAR(18),
+  NUM_FACE VARCHAR(3),
+  TIPO_LOGRADOURO VARCHAR(20),
+  NOM_LOGRADOURO VARCHAR(100),
+  LATITUDE_CENTROIDE DECIMAL(10, 8),   -- Ex: -23.5506507 (São Paulo)
+  LONGITUDE_CENTROIDE DECIMAL(11, 8),  -- Ex: -46.6333824
+  COORD_PONTOS VARCHAR(300), 
+  COORD_CENTROIDE GEOMETRY
+) ENGINE=InnoDB;
+/
+-- Inserir os dados distintos da tabela cnefe
+INSERT INTO CNEFE_QUADRAS (
+  NUM_QUADRA
+)
+SELECT DISTINCT
+  NUM_QUADRA
+FROM
+  cnefe
+ORDER BY
+  NUM_QUADRA;
+
+
+-- Criar a tabela (se ainda não existir)
+CREATE TABLE CNEFE_QUADRAS (
+  NUM_QUADRA VARCHAR(18),
+  LATITUDE_CENTROIDE FLOAT,
+  LONGITUDE_CENTROIDE FLOAT,
+  COORD_CENTROIDE VARCHAR(100),
+  geom GEOMETRY           -- WGS84 (padrão para lat/long)
+) ENGINE=InnoDB;
+
+-- Inserir os dados distintos da tabela cnefe
+INSERT INTO CNEFE_FACES (
+  NUM_QUADRA,
+  NUM_FACE,
+  TIPO_LOGRADOURO,
+  NOM_LOGRADOURO
+)
+SELECT DISTINCT
+  NUM_QUADRA,
+  NUM_FACE,
+  TIPO_LOGRADOURO,
+  NOM_LOGRADOURO
+FROM
+  cnefe
+ORDER BY
+  NUM_QUADRA,
+  NUM_FACE;
+
+
+  
+  
+
