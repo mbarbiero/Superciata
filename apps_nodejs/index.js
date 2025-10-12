@@ -111,12 +111,8 @@ app.get('/superciata/preenche_CN_FACES', async (req, res) => {
   }
 
   try {
-    const resultado = db.preenche_CN_FACES();
-    res.json({
-      sucesso: true,
-      detalhes: "Tabela CN_QUADRAS OK",
-      "resultado": JSON.stringify(resultado)
-    });
+    const resultado = await db.preenche_CN_FACES();
+    res.json(resultado);
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -201,12 +197,8 @@ app.get('/superciata/preenche_CN_QUADRAS', async (req, res) => {
   }
 
   try {
-    const resultado = db.preenche_CN_QUADRAS();
-    res.json({
-      sucesso: true,
-      detalhes: "Tabela CN_QUADRAS OK",
-      "resultado": JSON.stringify(resultado)
-    });
+    const resultado = await db.preenche_CN_QUADRAS();
+    res.json(resultado);
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -355,6 +347,24 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
 });
 
 // 🔹🔹🔹 CN_PONTOS 🔹🔹🔹
+// 🔹 Rota GET para criar a tabela CN_PONTOS
+app.get("/superciata/cria_CN_PONTOS", async (req, res) => {
+  try {
+    const resultado = db.cria_CN_PONTOS();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CN_PONTOS OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar o arquivo CN_PONTOS"
+    });
+  }
+});
+
 // 🔹 Rota GET para carregar CSV
 app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
   try {
@@ -390,7 +400,7 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
       await db.executaQuery(`delete from CN_PONTOS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
     }
     console.log('🔄 Tentando carregar CSV...');
-    const resultado = await db.carregaCSV(arquivoPath);
+    const resultado = await db.preenche_CN_PONTOS(arquivoPath);
 
     arquivos.deletaArquivo(arquivoPath);
 

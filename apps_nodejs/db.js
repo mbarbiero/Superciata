@@ -148,7 +148,7 @@ async function preenche_CN_PONTOS(arquivoPath) {
     // Query com LOCAL INFILE
     const query = `
       LOAD DATA LOCAL INFILE '${caminhoUnix}'
-      INTO TABLE ${tabela}
+      INTO TABLE CN_PONTOS
       CHARACTER SET utf8
       FIELDS TERMINATED BY ';'
       LINES TERMINATED BY '\\n'
@@ -286,6 +286,134 @@ async function contaRegistros(nomeTabela = 'CN_PONTOS') {
   }
 }
 
+// 🔹🔹🔹 CN_QUADRAS 🔹🔹🔹
+// Função para criar CN_QUADRAS()
+async function cria_CN_QUADRAS() {
+  console.log(`Criando CN_QUADRAS`);
+  const query = `
+    CREATE TABLE IF NOT EXISTS CN_QUADRAS (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ID_QUADRA            VARCHAR(19),
+      COD_MUNICIPIO VARCHAR(7),
+      QTD_PONTOS INT,
+      CENTROIDE POINT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_QUADRAS criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Função para preencher CN_QUADRAS
+async function preenche_CN_QUADRAS() {
+
+  console.log(`Preparando CN_QUADRAS`);
+
+  const query = `
+    INSERT INTO CN_QUADRAS (ID_QUADRA, COD_MUNICIPIO, QTD_PONTOS,
+        CENTROIDE)
+    SELECT
+        ID_QUADRA,
+        COD_MUNICIPIO,
+        COUNT(*) AS QTD_PONTOS,
+        POINT(AVG(LONGITUDE), AVG(LATITUDE)) AS CENTROIDE
+    FROM CN_PONTOS_UNICOS
+    GROUP BY ID_QUADRA;
+  `;
+
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_QUADRAS criada com sucesso.",
+      "linhas incluídas": resultado.affectedRows 
+    }
+
+    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CN_QUADRAS:', error);
+    throw error;
+  }
+}
+
+// 🔹🔹🔹 CN_FACES 🔹🔹🔹
+// Função para criar CN_FACES()
+async function cria_CN_FACES() {
+  console.log(`Criando CN_FACES`);
+  const query = `
+    CREATE TABLE IF NOT EXISTS CN_FACES (
+      ID_FACE VARCHAR(22),
+      COD_MUNICIPIO VARCHAR(7),
+      ID_QUADRA VARCHAR(19),
+      NOM_LOGRADOURO VARCHAR(250),
+      QTD_PONTOS INT,
+      CENTROIDE POINT
+    );`
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_FACES criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Função para preencher CN_FACES
+async function preenche_CN_FACES() {
+
+  console.log(`Preparando CN_FACES`);
+
+  const query = `
+    INSERT INTO CN_FACES (ID_FACE, COD_MUNICIPIO, ID_QUADRA,
+        NOM_LOGRADOURO, QTD_PONTOS, CENTROIDE)
+    SELECT
+        ID_FACE,
+        COD_MUNICIPIO,
+        ID_QUADRA,
+        NOM_LOGRADOURO,
+        COUNT(*) AS QTD_PONTOS,
+        POINT(AVG(LONGITUDE), AVG(LATITUDE)) AS CENTROIDE
+    FROM CN_PONTOS_UNICOS
+    GROUP BY ID_FACE;
+  `;
+
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_FACES criada com sucesso.",
+      "linhas incluídas": resultado.affectedRows 
+    }
+
+    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CN_FACES:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   testaConexao,
   executaQuery,
@@ -296,5 +424,9 @@ module.exports = {
   cria_CN_PONTOS,
   preenche_CN_PONTOS,
   cria_CN_PONTOS_UNICOS,
-  preenche_CN_PONTOS_UNICOS
+  preenche_CN_PONTOS_UNICOS,
+  cria_CN_QUADRAS,
+  preenche_CN_QUADRAS,
+  cria_CN_FACES,
+  preenche_CN_FACES
 };
