@@ -133,8 +133,10 @@
       border: 1px solid #ddd;
       border-radius: 10px;
       min-height: 120px;
-      max-height: 300px; /* altura máxima */
-      overflow-y: auto;  /* rolagem vertical */
+      max-height: 300px;
+      /* altura máxima */
+      overflow-y: auto;
+      /* rolagem vertical */
       background: #f9f9f9;
       font-size: 14px;
       color: #333;
@@ -238,23 +240,35 @@
   <main class="timeline-container">
     <h1 style="text-align:center; margin-bottom:40px;">Linha do Tempo Processar CNEFE</h1>
 
+    <div style="text-align:center; margin-bottom:25px;">
+      <label for="municipioSelect"><b>Município:</b></label>
+      <select id="municipioSelect" style="padding:6px 10px; font-size:14px; border-radius:6px; border:1px solid #ccc;">
+        <option>Carregando municípios...</option>
+      </select>
+    </div>
+
     <div class="timeline">
       <div>
         <div class="timeline-row">
           <div class="step" id="step1" onclick="openFileInput()">Carregar Arquivo CNEFE</div>
+          <!--
           <div class="arrow">➔</div>
-          <div class="step" id="step2" onclick="preparaCN_PONTOS_UNICOS()">Pontos Únicos</div>
+          <div class="step" id="step2" onclick="preparaCNEFE()">Pontos Únicos</div>
           <div class="arrow">➔</div>
           <div class="step" id="step3" onclick="geraCN_QUADRAS()">Gerar Quadras CNEFE</div>
+          -->
         </div>
       </div>
 
       <div>
         <h3 class="section-title">VISUALIZAÇÃO</h3>
         <div class="timeline-row">
-          <div class="step view" id="view1" onclick="openPage('Mapa.html?page=PontosUnicos_CNEFE.html')">Visualizar Pontos</div>
-          <div class="step view disabled" id="view2" onclick="openPage('CentroideQuadras_CNEFE.html')">Centroides das Quadras</div>
-          <div class="step view disabled" id="view3" onclick="openPage('CentroideFaces_CNEFE.html')">Centroides das Faces</div>
+          <div class="step view" id="view1"
+            onclick="openPage('Mapa.html?page=PontosUnicos_CNEFE.html')">Visualizar Pontos</div>
+          <div class="step view" id="view2"
+            onclick="openPage('Mapa.html?page=Quadras_CNEFE.html')">Centroides das Quadras</div>
+          <div class="step view" id="view3" onclick="openPage('Mapa.html?page=Faces_CNEFE.html')">
+            Centroides das Faces</div>
         </div>
       </div>
     </div>
@@ -330,7 +344,7 @@
           uploadBtn.textContent = "Enviando...";
         }
 
-        let response = await fetch("https://smuu.com.br:21079/carrega_CNEFE", {
+        let response = await fetch("https://smuu.com.br:21079/superciata/carrega_CNEFE", {
           method: "POST",
           body: formData
         });
@@ -351,7 +365,7 @@
         const data = await response.json();
         addReportMessage("Upload realizado com sucesso:\n" + JSON.stringify(data, null, 2));
 
-        await preparaCN_PONTOS_UNICOS(cod_municipio);
+        await preparaCNEFE(cod_municipio);
 
         markDone(1);
         closeFileInput();
@@ -372,11 +386,14 @@
       }
     }
 
-    async function preparaCN_PONTOS_UNICOS(cod_municipio) {
+    async function preparaCNEFE(cod_municipio) {
       addReportMessage("Preparando CN_PONTOS_UNICOS...");
       await criaCN_PONTOS_UNICOS();
       await preencheCN_PONTOS_UNICOS(cod_municipio);
-      // markDone(2);
+      await criaCN_QUADRAS();
+      await preencheCN_QUADRAS(cod_municipio);
+      await criaCN_FACES();
+      await preencheCN_FACES(cod_municipio);
     }
 
     async function criaCN_PONTOS_UNICOS() {
@@ -397,11 +414,40 @@
       addReportMessage("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
     }
 
-    async function geraCN_QUADRAS() {
-      addReportMessage("Gerando Quadras CNEFE...");
-      await criaCN_PONTOS_UNICOS();
-      await preencheCN_PONTOS_UNICOS();
-      markDone(3);
+    async function criaCN_QUADRAS() {
+      addReportMessage("Criando tabela CN_QUADRAS...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function preencheCN_QUADRAS(cod_municipio) {
+      addReportMessage("Preenchendo CN_QUADRAS...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function criaCN_FACES() {
+      addReportMessage("Criando tabela CN_FACES...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_FACES`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function preencheCN_FACES(cod_municipio) {
+      addReportMessage("Preenchendo CN_FACES...");
+      const response = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await response.json();
+      addReportMessage("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
     }
 
     function markDone(step) {
@@ -422,8 +468,30 @@
     }
 
     function openPage(url) {
-      window.open(url, '_blank');
+      window.open(url, '_self');
     }
   </script>
+  <script src="municipios.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      carregarMunicipios("municipioSelect");
+
+      // Redefine openPage para abrir na mesma janela e incluir cod_municipio e UF
+      window.openPage = function (url) {
+        const cod = localStorage.getItem("cod_municipio");
+        const uf = localStorage.getItem("uf_municipio");
+
+        if (!cod || !uf) {
+          alert("⚠️ Selecione um município e sua UF antes de continuar!");
+          return;
+        }
+
+        // Adiciona parâmetros na URL
+        const destino = `${url}?cod_municipio=${cod}&uf=${uf}`;
+        window.open(destino, '_self');
+      };
+    });
+  </script>
 </body>
+
 </html>

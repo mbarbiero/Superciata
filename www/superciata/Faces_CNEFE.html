@@ -1,19 +1,46 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Centroides das Faces</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; display: flex; flex-direction: column; }
-    header { padding: 10px 15px; background-color: #f0f0f0; border-bottom: 1px solid #ddd; }
-    h1 { margin: 0; font-size: 1.2em; color: #004aad; }
-    #mapa { flex-grow: 1; width: 100%; }
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 10px 15px;
+      background-color: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.2em;
+      color: #004aad;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    #mapa {
+      flex-grow: 1;
+      width: 100%;
+    }
   </style>
 </head>
+
 <body>
-  <header><h1> das Faces</h1></header>
+  <header>
+    <h1>Centroides das Faces</h1>
+  </header>
   <div id="mapa"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -71,4 +98,5 @@
     carregarFaces(codMunicipio);
   </script>
 </body>
+
 </html>

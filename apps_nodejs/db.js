@@ -51,50 +51,44 @@ async function tabelaExiste(nomeTabela = 'CN_PONTOS') {
   }
 }
 
-// Função para criar tabela
-async function criaTabelaSeNecessario(tabela = 'CN_PONTOS') {
-  const tabelaJaExiste = await tabelaExiste(tabela);
-
-  if (tabelaJaExiste) {
-    console.log(`Tabela ${tabela} já existe, pulando criação`);
-    return true;
-  }
+// Função para criar tabela CN_PONTOS
+async function cria_CN_PONTOS(tabela = 'CN_PONTOS') {
 
   console.log('Criando tabela CN_PONTOS...');
 
   const createTableCN_PONTOS = `
-    CREATE TABLE CN_PONTOS (
+    CREATE TABLE IF NOT EXISTS CN_PONTOS (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      COD_UNICO_ENDERECO VARCHAR(50),
+      COD_UNICO_ENDERECO VARCHAR(20),
       COD_UF VARCHAR(2),
-      COD_MUNICIPIO VARCHAR(10),
-      COD_DISTRITO VARCHAR(10),
-      COD_SUBDISTRITO VARCHAR(10),
-      COD_SETOR VARCHAR(20),
-      NUM_QUADRA VARCHAR(20),
-      NUM_FACE VARCHAR(20),
+      COD_MUNICIPIO VARCHAR(7),
+      COD_DISTRITO VARCHAR(9),
+      COD_SUBDISTRITO VARCHAR(11),
+      COD_SETOR VARCHAR(16),
+      NUM_QUADRA VARCHAR(3),
+      NUM_FACE VARCHAR(3),
       CEP VARCHAR(8),
-      DSC_LOCALIDADE VARCHAR(100),
+      DSC_LOCALIDADE VARCHAR(50),
       NOM_TIPO_SEGLOGR VARCHAR(50),
       NOM_TITULO_SEGLOGR VARCHAR(50),
-      NOM_SEGLOGR VARCHAR(200),
-      NUM_ENDERECO VARCHAR(20),
-      DSC_MODIFICADOR VARCHAR(50),
-      NOM_COMP_ELEM1 VARCHAR(50),
-      VAL_COMP_ELEM1 VARCHAR(100),
-      NOM_COMP_ELEM2 VARCHAR(50),
-      VAL_COMP_ELEM2 VARCHAR(100),
-      NOM_COMP_ELEM3 VARCHAR(50),
-      VAL_COMP_ELEM3 VARCHAR(100),
-      NOM_COMP_ELEM4 VARCHAR(50),
-      VAL_COMP_ELEM4 VARCHAR(100),
-      NOM_COMP_ELEM5 VARCHAR(50),
-      VAL_COMP_ELEM5 VARCHAR(100),
+      NOM_SEGLOGR VARCHAR(50),
+      NUM_ENDERECO VARCHAR(10),
+      DSC_MODIFICADOR VARCHAR(20),
+      NOM_COMP_ELEM1 VARCHAR(20),
+      VAL_COMP_ELEM1 VARCHAR(20),
+      NOM_COMP_ELEM2 VARCHAR(20),
+      VAL_COMP_ELEM2 VARCHAR(20),
+      NOM_COMP_ELEM3 VARCHAR(20),
+      VAL_COMP_ELEM3 VARCHAR(20),
+      NOM_COMP_ELEM4 VARCHAR(20),
+      VAL_COMP_ELEM4 VARCHAR(20),
+      NOM_COMP_ELEM5 VARCHAR(20),
+      VAL_COMP_ELEM5 VARCHAR(20),
       LATITUDE DECIMAL(10,8),
-      LONGITUDE DECIMAL(11,8),
+      LONGITUDE DECIMAL(10,8),
       NV_GEO_COORD VARCHAR(10),
       COD_ESPECIE VARCHAR(10),
-      DSC_ESTABELECIMENTO VARCHAR(200),
+      DSC_ESTABELECIMENTO VARCHAR(100),
       COD_INDICADOR_ESTAB_ENDERECO VARCHAR(10),
       COD_INDICADOR_CONST_ENDERECO VARCHAR(10),
       COD_INDICADOR_FINALIDADE_CONST VARCHAR(10),
@@ -131,8 +125,7 @@ async function executaQuery(sql, params = []) {
 }
 
 // Função para LOAD DATA LOCAL INFILE
-async function carregaCSV(arquivoPath, tabela = 'CN_PONTOS') {
-  await criaTabelaSeNecessario(tabela);
+async function preenche_CN_PONTOS(arquivoPath) {
 
   // Criar uma conexão especial para LOCAL INFILE
   const connection = await mysql.createConnection({
@@ -191,12 +184,12 @@ async function cria_CN_PONTOS_UNICOS() {
   const query = `
       CREATE TABLE IF NOT EXISTS CN_PONTOS_UNICOS (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        COD_MUNICIPIO        VARCHAR(10),
-        COD_UNICO_ENDERECO   VARCHAR(50),
-        ID_QUADRA            VARCHAR(20),
-        ID_FACE              VARCHAR(20),
-        NOM_LOGRADOURO       VARCHAR(255),
-        NUM_ENDERECO         VARCHAR(20),
+        COD_MUNICIPIO        VARCHAR(7),
+        COD_UNICO_ENDERECO   VARCHAR(20),
+        ID_QUADRA            VARCHAR(19),
+        ID_FACE              VARCHAR(22),
+        NOM_LOGRADOURO       VARCHAR(250),
+        NUM_ENDERECO         VARCHAR(10),
         LATITUDE             DECIMAL(10,8),
         LONGITUDE            DECIMAL(11,8),
         COORDS               POINT,
@@ -229,7 +222,7 @@ async function preenche_CN_PONTOS_UNICOS() {
       COD_MUNICIPIO,
       COD_UNICO_ENDERECO,
       CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
-      CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 2, '0')) AS ID_FACE,
+      CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
       REPLACE(
         CONCAT(
           TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
@@ -296,12 +289,12 @@ async function contaRegistros(nomeTabela = 'CN_PONTOS') {
 module.exports = {
   testaConexao,
   executaQuery,
-  carregaCSV,
   tabelaExiste,
-  criaTabelaSeNecessario,
   descreveTabela,
   amostraDados,
   contaRegistros,
+  cria_CN_PONTOS,
+  preenche_CN_PONTOS,
   cria_CN_PONTOS_UNICOS,
   preenche_CN_PONTOS_UNICOS
 };
