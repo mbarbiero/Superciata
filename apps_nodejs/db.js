@@ -1,6 +1,7 @@
 // db.js
 const mysql = require('mysql2/promise');
 const fs = require('fs');
+const CI = require('./ciata.js');
 
 const dbConfig = {
   host: 'mysql.smuu.com.br',
@@ -414,6 +415,78 @@ async function preenche_CN_FACES() {
   }
 }
 
+// 🔹🔹🔹 CI_LOTES 🔹🔹🔹
+// Função para criar CI_LOTES
+async function cria_CI_LOTES() {
+  console.log(`Criando CI_LOTES`);
+  try {
+    await executaQuery(CI.SQL_CriaCI_LOTES);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_LOTES criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Função para LOAD DATA LOCAL INFILE
+async function preenche_CI_LOTES(arquivoPath) {
+
+  // Criar uma conexão especial para LOCAL INFILE
+  const connection = await mysql.createConnection({
+    ...dbConfig,
+    // Configuração crucial para mysql2 v2.0+
+    streamFactory: (path) => fs.createReadStream(path),
+    infileStreamFactory: (path) => fs.createReadStream(path)
+  });
+
+  try {
+    // Verificar se arquivo existe
+    if (!fs.existsSync(arquivoPath)) {
+      throw new Error(`Arquivo não encontrado: ${arquivoPath}`);
+    }
+
+    const caminhoUnix = arquivoPath.replace(/\\/g, '/');
+
+    console.log(`Preparando LOAD DATA LOCAL INFILE: ${caminhoUnix}`);
+
+    // Query com LOCAL INFILE
+    const query = `
+      LOAD DATA LOCAL INFILE '${caminhoUnix}'
+      INTO TABLE CN_PONTOS
+      CHARACTER SET utf8
+      FIELDS TERMINATED BY ';'
+      LINES TERMINATED BY '\\n'
+      IGNORE 1 ROWS
+      (
+        COD_UNICO_ENDERECO, COD_UF, COD_MUNICIPIO, COD_DISTRITO, COD_SUBDISTRITO,
+        COD_SETOR, NUM_QUADRA, NUM_FACE, CEP, DSC_LOCALIDADE, NOM_TIPO_SEGLOGR,
+        NOM_TITULO_SEGLOGR, NOM_SEGLOGR, NUM_ENDERECO, DSC_MODIFICADOR,
+        NOM_COMP_ELEM1, VAL_COMP_ELEM1, NOM_COMP_ELEM2, VAL_COMP_ELEM2,
+        NOM_COMP_ELEM3, VAL_COMP_ELEM3, NOM_COMP_ELEM4, VAL_COMP_ELEM4,
+        NOM_COMP_ELEM5, VAL_COMP_ELEM5, LATITUDE, LONGITUDE, NV_GEO_COORD,
+        COD_ESPECIE, DSC_ESTABELECIMENTO, COD_INDICADOR_ESTAB_ENDERECO,
+        COD_INDICADOR_CONST_ENDERECO, COD_INDICADOR_FINALIDADE_CONST, COD_TIPO_ESPECI
+      )
+    `;
+
+    console.log('Executando carga de dados...');
+
+    const [resultado] = await connection.query(query);
+
+    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resultado;
+
+  } catch (error) {
+    console.error('Erro no LOAD DATA LOCAL INFILE:', error);
+    throw error;
+  }
+}
+
+
 module.exports = {
   testaConexao,
   executaQuery,
@@ -428,5 +501,6 @@ module.exports = {
   cria_CN_QUADRAS,
   preenche_CN_QUADRAS,
   cria_CN_FACES,
-  preenche_CN_FACES
+  preenche_CN_FACES,
+  cria_CI_LOTES
 };

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload de Arquivos - SuperCIATA</title>
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --view-color: #6cb4ee;
+      --done: #111;
+      --text: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    .upload-container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      color: #444;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      margin-bottom: 20px;
+      background: #fafafa;
+      position: relative;
+    }
+
+    .upload-area:hover {
+      border-color: var(--brand-light);
+      background: #f5f9ff;
+    }
+
+    .upload-area.dragover {
+      border-color: var(--brand-dark);
+      background: #e8f0ff;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      color: var(--brand-light);
+      margin-bottom: 10px;
+    }
+
+    .upload-area p {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
+    .upload-area .file-name {
+      margin-top: 12px;
+      font-weight: 600;
+      color: var(--brand-dark);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .botoes {
+      text-align: center;
+      margin: 15px 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--brand-light);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 14px;
+      min-width: 140px;
+    }
+
+    button:hover {
+      background: var(--brand-dark);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-limpar {
+      background: #6c757d;
+      min-width: 120px;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .btn-limpar:hover {
+      background: #5a6268;
+    }
+
+    #relatorio {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+      padding: 12px;
+      min-height: 100px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-size: 13px;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .msg {
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 6px;
+      border-left: 4px solid;
+      font-size: 13px;
+    }
+
+    .info {
+      background: #e3f2fd;
+      color: #0d47a1;
+      border-left-color: #0d47a1;
+    }
+
+    .ok {
+      background: #e8f5e9;
+      color: #1b5e20;
+      border-left-color: #1b5e20;
+    }
+
+    .erro {
+      background: #ffebee;
+      color: #b71c1c;
+      border-left-color: #b71c1c;
+    }
+
+    .relatorio-footer {
+      text-align: right;
+      margin-top: 8px;
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 30px 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: auto;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 10px 20px;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      nav a {
+        margin: 0 10px;
+      }
+
+      .upload-area {
+        padding: 25px 15px;
+      }
+
+      .botoes {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      button {
+        width: 100%;
+        max-width: 280px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+    </div>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="javascript:history.back()">Voltar</a>
+    </nav>
+  </header>
+
+  <main class="upload-container">
+    <h1 style="text-align:center; margin-bottom:25px;">Upload de Arquivos - SuperCIATA</h1>
+
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <p><strong>Clique aqui ou arraste um arquivo ZIP</strong></p>
+      <p style="font-size:14px; color:#666;">Arquivos suportados: <b>CNEFE</b> ou <b>Cadastro Municipal (CIATA)</b></p>
+      <div class="file-name" id="fileName"></div>
+      <input type="file" id="arquivoZip" accept=".zip" />
+    </div>
+
+    <div class="botoes">
+      <button id="btnCNEFE">Processar CNEFE</button>
+      <button id="btnCIATA">Processar CIATA</button>
+    </div>
+
+    <h3 style="margin: 15px 0 8px 0; color: #444; font-size: 16px;">Relatório de Execução</h3>
+    <div id="relatorio"></div>
+    <div class="relatorio-footer">
+      <button id="btnLimpar" class="btn-limpar">Limpar Relatório</button>
+    </div>
+  </main>
+
+  <footer>
+    © <span id="year"></span> Superciata — Geoespacialização Urbana
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const relatorio = document.getElementById("relatorio");
+    const uploadArea = document.getElementById("uploadArea");
+    const inputArquivo = document.getElementById("arquivoZip");
+    const fileName = document.getElementById("fileName");
+    const btnCNEFE = document.getElementById("btnCNEFE");
+    const btnCIATA = document.getElementById("btnCIATA");
+
+    function atualizarEstadoBotoes() {
+      const temArquivo = inputArquivo.files.length > 0;
+      btnCNEFE.disabled = !temArquivo;
+      btnCIATA.disabled = !temArquivo;
+    }
+
+    function addMensagem(msg, tipo = "info") {
+      const linha = document.createElement("div");
+      linha.className = `msg ${tipo}`;
+      linha.textContent = msg;
+      relatorio.appendChild(linha);
+      relatorio.scrollTop = relatorio.scrollHeight;
+    }
+
+    async function EnviarArquivo() {
+      const arquivo = inputArquivo.files[0];
+      if (!arquivo) {
+        addMensagem("⚠️ Escolha ou arraste um arquivo ZIP primeiro.", "erro");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("arqZip", arquivo);
+
+      // Desabilitar botões durante o processamento
+      btnCNEFE.disabled = true;
+      btnCIATA.disabled = true;
+      btnCNEFE.textContent = "Processando...";
+      btnCIATA.textContent = "Processando...";
+
+      addMensagem(`📤 Enviando ${arquivo.name}`, "info");
+
+      try {
+        var resposta = await fetch('https://smuu.com.br:21079/superciata/carrega_arqZip', { method: "POST", body: formData });
+        var resultado = await resposta.json();
+        if (resultado.sucesso) {
+          addMensagem("✅ " + (resultado.mensagem || "Processamento concluído com sucesso!"), "ok");
+        } else {
+          addMensagem("❌ Erro: " + (resultado.mensagem || "Falha no processamento."), "erro");
+        }
+
+      } catch (e) {
+        addMensagem("❌ Erro de conexão: " + e.message, "erro");
+      } finally {
+        // Reabilitar botões após o processamento
+        btnCNEFE.disabled = false;
+        btnCIATA.disabled = false;
+        btnCNEFE.textContent = "Processar CNEFE";
+        btnCIATA.textContent = "Processar CIATA";
+      }
+    }
+
+    // ==== BOTÕES ====
+    btnCNEFE.onclick = () => ProcessaCNEFE();
+    btnCIATA.onclick = () => ProcessaCIATA();
+    document.getElementById("btnLimpar").onclick = () => {
+      relatorio.innerHTML = '';
+    };
+
+    async function ProcessaCNEFE() {
+      var resposta, resultado;
+
+      await EnviarArquivo();
+      await CriaCN_PONTOS();
+      await PreencheCN_PONTOS();
+      await CriaCN_PONTOS_UNICOS();
+      await PreencheCN_PONTOS_UNICOS();
+      await CriaCN_QUADRAS();
+      await PreencheCN_QUADRAS();
+      await CriaCN_FACES();
+      await PreencheCN_FACES();
+    }
+
+    async function CriaCN_PONTOS() {
+      addMensagem("Criando tabela CN_PONTOS...");
+      const resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function PreencheCN_PONTOS(cod_municipio) {
+      addMensagem("Preenchendo CN_PONTOS...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function CriaCN_PONTOS_UNICOS() {
+      addMensagem("Criando tabela CN_PONTOS_UNICOS...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS_UNICOS`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function PreencheCN_PONTOS_UNICOS(cod_municipio) {
+      addMensagem("Preenchendo CN_PONTOS_UNICOS...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS_UNICOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function CriaCN_QUADRAS() {
+      addMensagem("Criando tabela CN_QUADRAS...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function PreencheCN_QUADRAS(cod_municipio) {
+      addMensagem("Preenchendo CN_QUADRAS...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function CriaCN_FACES() {
+      addMensagem("Criando tabela CN_FACES...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_FACES`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+    }
+
+    async function PreencheCN_FACES(cod_municipio) {
+      addMensagem("Preenchendo CN_FACES...");
+      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      const relat = await resp.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+    }
+
+
+
+    async function ProcessaCIATA() {
+      var resposta, resultado;
+
+      await EnviarArquivo();
+
+    }
+
+
+
+    // ==== DRAG & DROP ====
+    uploadArea.addEventListener("click", () => inputArquivo.click());
+
+    uploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadArea.classList.add("dragover");
+    });
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragover");
+    });
+
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+
+      const arquivo = e.dataTransfer.files[0];
+      if (arquivo && arquivo.name.endsWith(".zip")) {
+        inputArquivo.files = e.dataTransfer.files;
+        fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
+        addMensagem(`📦 Arquivo recebido: ${arquivo.name}`, "ok");
+        atualizarEstadoBotoes();
+      } else {
+        addMensagem("⚠️ Apenas arquivos ZIP são aceitos.", "erro");
+      }
+    });
+
+    // Atualizar quando um arquivo for selecionado via input
+    inputArquivo.addEventListener("change", () => {
+      if (inputArquivo.files.length > 0) {
+        const arquivo = inputArquivo.files[0];
+        fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
+        addMensagem(`📦 Arquivo selecionado: ${arquivo.name}`, "ok");
+      } else {
+        fileName.textContent = "";
+      }
+      atualizarEstadoBotoes();
+    });
+
+    // Inicializar estado dos botões
+    atualizarEstadoBotoes();
+  </script>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-// server.js
+// index.js
 const express = require("express");
 const https = require("https");
 const fs = require("fs");
@@ -423,7 +423,7 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
 });
 
 // 🔹 Rota POST para upload do ZIP
-app.post("/superciata/carrega_CNEFE", upload.single("arqCnefe"), async (req, res) => {
+app.post("/superciata/carrega_arqZip", upload.single("arqZip"), async (req, res) => {
   try {
     const zipPath = req.file.path;
 
@@ -434,15 +434,33 @@ app.post("/superciata/carrega_CNEFE", upload.single("arqCnefe"), async (req, res
     arquivos.deletaArquivo(zipPath);
 
     res.json({
-      status: "ok",
+      sucesso: true,
       mensagem: `ZIP recebido e descompactado em ${CsvDir}`,
-      pasta: CsvDir,
     });
   } catch (err) {
-    console.error("Erro ao processar ZIP:", err);
-    res.status(500).json({ status: "erro", mensagem: err.message });
+    res.json({
+      sucesso: false,
+      mensagem: err.message,
+    });
   }
 });
 
-
+// 🔹🔹🔹 CI_LOTES 🔹🔹🔹
+// 🔹 Rota GET para criar a tabela CI_LOTES
+app.get("/superciata/cria_CI_LOTES", async (req, res) => {
+  try {
+    const resultado = db.cria_CI_LOTES();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CI_LOTES OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar o arquivo CI_LOTES"
+    });
+  }
+});
 
