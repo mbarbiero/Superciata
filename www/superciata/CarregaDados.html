@@ -283,6 +283,9 @@
     const btnCNEFE = document.getElementById("btnCNEFE");
     const btnCIATA = document.getElementById("btnCIATA");
 
+    let cod_municipio = '';
+    let nmArquivoCSV = '';
+
     function atualizarEstadoBotoes() {
       const temArquivo = inputArquivo.files.length > 0;
       btnCNEFE.disabled = !temArquivo;
@@ -320,6 +323,11 @@
         var resultado = await resposta.json();
         if (resultado.sucesso) {
           addMensagem("✅ " + (resultado.mensagem || "Processamento concluído com sucesso!"), "ok");
+          cod_municipio = retCodMunicipio(arquivo.name);
+          nmArquivoCSV = arquivo.name.replace(/\.zip/i, '.csv');
+          if (cod_municipio.length > 0) {
+            addMensagem(`✅ Código do Município: ${cod_municipio}`, "ok");
+          }
         } else {
           addMensagem("❌ Erro: " + (resultado.mensagem || "Falha no processamento."), "erro");
         }
@@ -342,14 +350,26 @@
       relatorio.innerHTML = '';
     };
 
+    // 🔹🔹🔹 retCodMunicipio() 🔹🔹🔹
+    function retCodMunicipio(nmArquivo) {
+      var codMunicipio = '';
+      if (nmArquivo.length > 7) {
+        var nmArquivo7 = nmArquivo.slice(0, 7);
+        if (!isNaN(+nmArquivo7) && !nmArquivo7.includes(' ')) {
+          codMunicipio = nmArquivo7;
+        }
+      }
+      return (codMunicipio);
+    }
+
     async function ProcessaCNEFE() {
       var resposta, resultado;
 
       await EnviarArquivo();
       await CriaCN_PONTOS();
-      await PreencheCN_PONTOS();
+      await PreencheCN_PONTOS(cod_municipio);
       await CriaCN_PONTOS_UNICOS();
-      await PreencheCN_PONTOS_UNICOS();
+      await PreencheCN_PONTOS_UNICOS(cod_municipio);
       await CriaCN_QUADRAS();
       await PreencheCN_QUADRAS();
       await CriaCN_FACES();
@@ -358,74 +378,74 @@
 
     async function CriaCN_PONTOS() {
       addMensagem("Criando tabela CN_PONTOS...");
-      const resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
     async function PreencheCN_PONTOS(cod_municipio) {
       addMensagem("Preenchendo CN_PONTOS...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
     async function CriaCN_PONTOS_UNICOS() {
       addMensagem("Criando tabela CN_PONTOS_UNICOS...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS_UNICOS`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_PONTOS_UNICOS`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
     async function PreencheCN_PONTOS_UNICOS(cod_municipio) {
       addMensagem("Preenchendo CN_PONTOS_UNICOS...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS_UNICOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_PONTOS_UNICOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
     async function CriaCN_QUADRAS() {
       addMensagem("Criando tabela CN_QUADRAS...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
     async function PreencheCN_QUADRAS(cod_municipio) {
       addMensagem("Preenchendo CN_QUADRAS...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
     async function CriaCN_FACES() {
       addMensagem("Criando tabela CN_FACES...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_FACES`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CN_FACES`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado criação: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
     async function PreencheCN_FACES(cod_municipio) {
       addMensagem("Preenchendo CN_FACES...");
-      const resp = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
-      const relat = await resp.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(relat, null, 2));
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
 

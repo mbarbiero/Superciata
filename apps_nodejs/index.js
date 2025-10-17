@@ -58,7 +58,7 @@ app.get("/superciata/testa_conexao", async (req, res) => {
     res.json({ sucesso: true, mensagem: "Conexão MySQL OK!" });
   } catch (err) {
     console.error("Erro na conexão:", err.message);
-    res.status(500).json({ sucesso: false, erro: err.message });
+    res.json({ sucesso: false, erro: err.message });
   }
 });
 
@@ -73,7 +73,7 @@ app.get("/superciata/lista_arquivos", async (req, res) => {
 
   } catch (err) {
     console.error("Erro ao listar arquivos:", err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message
     });
@@ -91,7 +91,7 @@ app.get('/superciata/cria_CN_FACES', async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao criar o arquivo CN_FACES"
@@ -115,7 +115,7 @@ app.get('/superciata/preenche_CN_FACES', async (req, res) => {
     res.json(resultado);
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
@@ -159,7 +159,7 @@ app.get('/superciata/retorna_CN_FACES', async (req, res) => {
 
   } catch (error) {
     console.error(`Erro ao buscar faces para ${cod_municipio}:`, error.message);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       mensagem: 'Erro interno ao consultar o banco de dados.'
     });
@@ -177,7 +177,7 @@ app.get('/superciata/cria_CN_QUADRAS', async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao criar o arquivo CN_QUADRAS"
@@ -201,7 +201,7 @@ app.get('/superciata/preenche_CN_QUADRAS', async (req, res) => {
     res.json(resultado);
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
@@ -244,7 +244,7 @@ app.get('/superciata/retorna_CN_QUADRAS', async (req, res) => {
 
   } catch (error) {
     console.error(`Erro ao buscar quadras para ${cod_municipio}:`, error.message);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       mensagem: 'Erro interno ao consultar o banco de dados.'
     });
@@ -263,7 +263,7 @@ app.get("/superciata/cria_CN_PONTOS_UNICOS", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao criar o arquivo CN_PONTOS_UNICOS"
@@ -292,7 +292,7 @@ app.get("/superciata/preenche_CN_PONTOS_UNICOS", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao preencher o arquivo CN_PONTOS_UNICOS"
@@ -306,7 +306,7 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
   const { cod_municipio } = req.query;
 
   if (!cod_municipio) {
-    return res.status(400).json({
+    return res.json({
       sucesso: false,
       mensagem: 'Parâmetro cod_municipio é obrigatório.'
     });
@@ -339,7 +339,7 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
 
   } catch (error) {
     console.error(`Erro ao buscar pontos para ${cod_municipio}:`, error.message);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       mensagem: 'Erro interno ao consultar o banco de dados.'
     });
@@ -357,7 +357,7 @@ app.get("/superciata/cria_CN_PONTOS", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao criar o arquivo CN_PONTOS"
@@ -368,20 +368,20 @@ app.get("/superciata/cria_CN_PONTOS", async (req, res) => {
 // 🔹 Rota GET para carregar CSV
 app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
   try {
-    const { arquivo } = req.query;
-    const cod_municipio = arquivo.substring(0, 7); // Código do município do IBGE com 7 algarismos
+    const { nmArquivo, cod_municipio } = req.query;
 
-    console.log(`arquivo em Rota GET para carregar CSV: ${arquivo}`);
+    console.log(`nmArquivo em /superciata/preenche_CN_PONTOS: ${nmArquivo}`);
+    console.log(`cod_municipio em /superciata/preenche_CN_PONTOS: ${cod_municipio}`);
 
-    if (!arquivo) {
+    if (!nmArquivo) {
       return res.status(400).json({
         sucesso: false,
         erro: "Parâmetro 'arquivo' é obrigatório",
-        exemplo: "https://smuu.com.br:21079/superciata/carrega_CN_PONTOS?arquivo=4301800_BARRACAO.csv"
+        exemplo: "https://smuu.com.br:21079/superciata/carrega_CN_PONTOS?nmArquivoCSV=4301800_BARRACAO.csv&cod_municipio=4301800"
       });
     }
 
-    const arquivoPath = path.join(CsvDir, arquivo);
+    const arquivoPath = path.join(CsvDir, nmArquivo);
 
     if (!fs.existsSync(arquivoPath)) {
       // Listar arquivos disponíveis para ajudar o usuário
@@ -406,15 +406,15 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
 
     res.json({
       sucesso: true,
-      mensagem: `Arquivo ${arquivo} carregado com sucesso!`,
+      mensagem: `Arquivo ${nmArquivo} carregado com sucesso!`,
       caminho_arquivo: arquivoPath,
       linhas_afetadas: resultado.affectedRows,
-      arquivo: arquivo
+      arquivo: nmArquivo
     });
 
   } catch (err) {
     console.error("Erro ao carregar arquivo CSV:", err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Verifique se o arquivo existe e tem formato CSV válido"
@@ -456,7 +456,7 @@ app.get("/superciata/cria_CI_LOTES", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    res.json({
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao criar o arquivo CI_LOTES"
