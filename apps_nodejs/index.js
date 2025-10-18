@@ -139,7 +139,9 @@ app.get('/superciata/retorna_CN_FACES', async (req, res) => {
     const sql = `
       SELECT 
         ID_FACE,
+        ID_QUADRA,
         NOM_LOGRADOURO,
+        QTD_PONTOS,
         ST_AsText(CENTROIDE) AS CENTROIDE
       FROM CN_FACES
       WHERE COD_MUNICIPIO = ?
@@ -284,12 +286,8 @@ app.get("/superciata/preenche_CN_PONTOS_UNICOS", async (req, res) => {
   }
 
   try {
-    const resultado = db.preenche_CN_PONTOS_UNICOS();
-    res.json({
-      sucesso: true,
-      detalhes: "Tabela CN_PONTOS_UNICOS OK",
-      "resultado": JSON.stringify(resultado)
-    });
+    const resultado = await db.preenche_CN_PONTOS_UNICOS();
+    res.json(resultado);
   } catch (err) {
     console.log(err);
     res.json({
@@ -334,7 +332,6 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
         dados: []
       });
     }
-
     res.json(resultados); // O frontend espera o array de objetos diretamente
 
   } catch (error) {
@@ -408,8 +405,7 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
       sucesso: true,
       mensagem: `Arquivo ${nmArquivo} carregado com sucesso!`,
       caminho_arquivo: arquivoPath,
-      linhas_afetadas: resultado.affectedRows,
-      arquivo: nmArquivo
+      linhas_afetadas: resultado.affectedRows
     });
 
   } catch (err) {

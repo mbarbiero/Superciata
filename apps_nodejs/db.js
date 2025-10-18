@@ -216,12 +216,11 @@ async function preenche_CN_PONTOS_UNICOS() {
   // Query com LOCAL INFILE
   const query = `
     INSERT INTO CN_PONTOS_UNICOS (
-      COD_MUNICIPIO, COD_UNICO_ENDERECO, ID_QUADRA, ID_FACE,
+      COD_MUNICIPIO, ID_QUADRA, ID_FACE,
       NOM_LOGRADOURO, NUM_ENDERECO, LATITUDE, LONGITUDE, COORDS
     )
-    SELECT 
+    SELECT DISTINCT
       COD_MUNICIPIO,
-      COD_UNICO_ENDERECO,
       CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
       CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
       REPLACE(
@@ -243,12 +242,15 @@ async function preenche_CN_PONTOS_UNICOS() {
   `;
 
   console.log('Executando carga de dados...');
-
   try {
     const resultado = await executaQuery(query);
-
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_PONTOS_UNICOS preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
     console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
-    return resultado;
+    return resp;
 
   } catch (error) {
     console.error('Erro ao preencher dados na tabela CN_PONTOS_UNICOS:', error);
@@ -337,8 +339,8 @@ async function preenche_CN_QUADRAS() {
 
     const resp = {
       "sucesso": true,
-      "mensagem": "Tabela CN_QUADRAS criada com sucesso.",
-      "linhas incluídas": resultado.affectedRows 
+      "mensagem": "Tabela CN_QUADRAS preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
     }
 
     console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
@@ -402,8 +404,8 @@ async function preenche_CN_FACES() {
 
     const resp = {
       "sucesso": true,
-      "mensagem": "Tabela CN_FACES criada com sucesso.",
-      "linhas incluídas": resultado.affectedRows 
+      "mensagem": "Tabela CN_FACES preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
     }
 
     console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
