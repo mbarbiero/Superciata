@@ -321,6 +321,7 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
                 ST_AsText(COORDS) AS COORDS 
             FROM CN_PONTOS_UNICOS
             WHERE COD_MUNICIPIO = ?
+            AND ID_QUADRA = "313170305000073P005"
         `;
 
     const resultados = await db.executaQuery(sql, [cod_municipio]);
@@ -366,30 +367,17 @@ app.get("/superciata/cria_CN_PONTOS", async (req, res) => {
 app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
   try {
     const { nmArquivo, cod_municipio } = req.query;
-
-    console.log(`nmArquivo em /superciata/preenche_CN_PONTOS: ${nmArquivo}`);
-    console.log(`cod_municipio em /superciata/preenche_CN_PONTOS: ${cod_municipio}`);
-
     if (!nmArquivo) {
-      return res.status(400).json({
+      return res.json({
         sucesso: false,
-        erro: "Parâmetro 'arquivo' é obrigatório",
-        exemplo: "https://smuu.com.br:21079/superciata/carrega_CN_PONTOS?nmArquivoCSV=4301800_BARRACAO.csv&cod_municipio=4301800"
+        erro: "Parâmetro 'arquivo' é obrigatório"
       });
     }
-
     const arquivoPath = path.join(CsvDir, nmArquivo);
-
     if (!fs.existsSync(arquivoPath)) {
-      // Listar arquivos disponíveis para ajudar o usuário
-      const arquivosDisponiveis = fs.readdirSync(CsvDir)
-        .filter(f => f.endsWith('.csv'))
-        .slice(0, 10); // Limitar a 10 arquivos
-
-      return res.status(404).json({
+      return res.json({
         sucesso: false,
-        erro: `Arquivo não encontrado: ${arquivoPath}`,
-        arquivos_disponiveis: arquivosDisponiveis
+        erro: `Arquivo não encontrado: ${arquivoPath}`
       });
     }
 
@@ -404,7 +392,6 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
     res.json({
       sucesso: true,
       mensagem: `Arquivo ${nmArquivo} carregado com sucesso!`,
-      caminho_arquivo: arquivoPath,
       linhas_afetadas: resultado.affectedRows
     });
 
@@ -459,4 +446,6 @@ app.get("/superciata/cria_CI_LOTES", async (req, res) => {
     });
   }
 });
+
+
 

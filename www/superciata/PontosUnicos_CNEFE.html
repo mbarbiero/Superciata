@@ -58,16 +58,16 @@
 
       // Camadas base
       const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-         maxZoom: 19,
+         maxZoom: 22,
          attribution: '&copy; OpenStreetMap'
       });
 
       const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-         maxZoom: 19,
+         maxZoom: 22,
          attribution: 'Tiles © Esri'
       });
 
-      osm.addTo(mapa);
+      // osm.addTo(mapa);
 
       // Controle para alternar camadas
       L.control.layers({

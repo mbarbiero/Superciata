@@ -143,9 +143,7 @@ async function preenche_CN_PONTOS(arquivoPath) {
     }
 
     const caminhoUnix = arquivoPath.replace(/\\/g, '/');
-
     console.log(`Preparando LOAD DATA LOCAL INFILE: ${caminhoUnix}`);
-
     // Query com LOCAL INFILE
     const query = `
       LOAD DATA LOCAL INFILE '${caminhoUnix}'
@@ -165,14 +163,8 @@ async function preenche_CN_PONTOS(arquivoPath) {
         COD_INDICADOR_CONST_ENDERECO, COD_INDICADOR_FINALIDADE_CONST, COD_TIPO_ESPECI
       )
     `;
-
-    console.log('Executando carga de dados...');
-
     const [resultado] = await connection.query(query);
-
-    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
     return resultado;
-
   } catch (error) {
     console.error('Erro no LOAD DATA LOCAL INFILE:', error);
     throw error;
@@ -213,42 +205,149 @@ async function cria_CN_PONTOS_UNICOS() {
 async function preenche_CN_PONTOS_UNICOS() {
 
   console.log(`Preparando CN_PONTOS_UNICOS`);
-  // Query com LOCAL INFILE
-  const query = `
-    INSERT INTO CN_PONTOS_UNICOS (
-      COD_MUNICIPIO, ID_QUADRA, ID_FACE,
-      NOM_LOGRADOURO, NUM_ENDERECO, LATITUDE, LONGITUDE, COORDS
-    )
-    SELECT DISTINCT
-      COD_MUNICIPIO,
-      CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
-      CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
-      REPLACE(
-        CONCAT(
-          TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
-          TRIM(COALESCE(NOM_TITULO_SEGLOGR,'')), ' ',
-          TRIM(COALESCE(NOM_SEGLOGR,''))
-        ),
-        '  ', ' '
-      ) AS NOM_LOGRADOURO,
-      NUM_ENDERECO,
-      LATITUDE,
-      LONGITUDE,
-      ST_GeomFromText(CONCAT('POINT(', LONGITUDE, ' ', LATITUDE, ')'))
-    FROM CN_PONTOS
-    WHERE NUM_QUADRA > 0
-      AND NV_GEO_COORD < '4'
-    ORDER BY ID_QUADRA;
-  `;
+  let resultado = '';
+  try {
+    let query = `
+    DROP TABLE IF EXISTS TMP_ENDERECOS_BASE;
+    `;
+    resultado = await executaQuery(query);
 
+    query = `
+    DROP TABLE IF EXISTS TMP_ENDERECOS_UNICOS;
+    `;
+    resultado = await executaQuery(query);
+
+    query = `  
+      -- Cria base com todos os registros válidos
+      CREATE TABLE TMP_ENDERECOS_BASE AS
+      SELECT 
+        COD_MUNICIPIO,
+        COD_UNICO_ENDERECO,
+        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
+        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
+        REPLACE(
+          CONCAT(
+            TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
+            TRIM(COALESCE(NOM_TITULO_SEGLOGR,'')), ' ',
+            TRIM(COALESCE(NOM_SEGLOGR,''))
+          ),
+          '  ', ' '
+        ) AS NOM_LOGRADOURO,
+        NUM_ENDERECO,
+        LATITUDE,
+        LONGITUDE
+      FROM CN_PONTOS
+      WHERE NUM_QUADRA > 0
+        AND NV_GEO_COORD < '4';
+    `;
+    resultado = await executaQuery(query);
+    console.log(resultado);
+
+    query = `
+      -- Cria índice para acelerar o agrupamento
+      CREATE INDEX idx_endereco_base ON TMP_ENDERECOS_BASE (COD_MUNICIPIO, NOM_LOGRADOURO, NUM_ENDERECO);
+    `;
+    resultado = await executaQuery(query);
+    console.log(resultado);
+
+    query = `
+      -- Cria tabela agrupada com coordenadas médias e quadra/face mais frequentes
+      CREATE TABLE TMP_ENDERECOS_UNICOS AS
+      SELECT 
+        COD_MUNICIPIO,
+        NOM_LOGRADOURO,
+        NUM_ENDERECO,
+        -- Coordenadas médias
+        AVG(LATITUDE) AS LATITUDE_MEDIA,
+        AVG(LONGITUDE) AS LONGITUDE_MEDIA,
+        COUNT(*) AS QTD_PONTOS,
+        -- Quadra e face mais frequentes (modo estatístico)
+        SUBSTRING_INDEX(
+          GROUP_CONCAT(ID_QUADRA ORDER BY ID_QUADRA SEPARATOR ','),
+          ',',
+          1
+        ) AS ID_QUADRA_MODO,
+        SUBSTRING_INDEX(
+          GROUP_CONCAT(ID_FACE ORDER BY ID_FACE SEPARATOR ','),
+          ',',
+          1
+        ) AS ID_FACE_MODO,
+        MIN(COD_UNICO_ENDERECO) AS COD_UNICO_ENDERECO_REF
+      FROM TMP_ENDERECOS_BASE
+      GROUP BY COD_MUNICIPIO, NOM_LOGRADOURO, NUM_ENDERECO;
+    `;
+    resultado = await executaQuery(query);
+    console.log(resultado);
+
+  } catch (error) {
+    console.error('Erro ao criar tabelas temporárias:', error);
+    throw error;
+  }
+
+  query = `
+      -- Insere os endereços únicos na tabela final
+      INSERT INTO CN_PONTOS_UNICOS (
+        COD_MUNICIPIO,
+        COD_UNICO_ENDERECO,
+        ID_QUADRA,
+        ID_FACE,
+        NOM_LOGRADOURO,
+        NUM_ENDERECO,
+        LATITUDE,
+        LONGITUDE,
+        COORDS
+      )
+      SELECT 
+        COD_MUNICIPIO,
+        COD_UNICO_ENDERECO_REF AS COD_UNICO_ENDERECO,
+        ID_QUADRA_MODO AS ID_QUADRA,
+        ID_FACE_MODO AS ID_FACE,
+        NOM_LOGRADOURO,
+        NUM_ENDERECO,
+        LATITUDE_MEDIA AS LATITUDE,
+        LONGITUDE_MEDIA AS LONGITUDE,
+        ST_GeomFromText(CONCAT('POINT(', LONGITUDE_MEDIA, ' ', LATITUDE_MEDIA, ')'))
+      FROM TMP_ENDERECOS_UNICOS;
+    `;
+
+  /*  // Query com LOCAL INFILE
+    const query = `
+      INSERT INTO CN_PONTOS_UNICOS (
+        COD_MUNICIPIO, COD_UNICO_ENDERECO, ID_QUADRA, ID_FACE,
+        NOM_LOGRADOURO, NUM_ENDERECO, LATITUDE, LONGITUDE, COORDS
+      )
+      SELECT 
+        COD_MUNICIPIO,
+        COD_UNICO_ENDERECO,
+        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
+        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
+        REPLACE(
+          CONCAT(
+            TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
+            TRIM(COALESCE(NOM_TITULO_SEGLOGR,'')), ' ',
+            TRIM(COALESCE(NOM_SEGLOGR,''))
+          ),
+          '  ', ' '
+        ) AS NOM_LOGRADOURO,
+        NUM_ENDERECO,
+        LATITUDE,
+        LONGITUDE,
+        ST_GeomFromText(CONCAT('POINT(', LONGITUDE, ' ', LATITUDE, ')'))
+      FROM CN_PONTOS
+      WHERE NUM_QUADRA > 0
+        AND NV_GEO_COORD < '4'
+      ORDER BY ID_QUADRA;
+    `;
+  */
   console.log('Executando carga de dados...');
   try {
-    const resultado = await executaQuery(query);
-    const resp = {
+    resultado = await executaQuery(query);
+    resp = {
       "sucesso": true,
       "mensagem": "Tabela CN_PONTOS_UNICOS preenchida com sucesso.",
       "linhas incluídas": resultado.affectedRows
     }
+
     console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
     return resp;
 
@@ -418,7 +517,7 @@ async function preenche_CN_FACES() {
 }
 
 // 🔹🔹🔹 CI_LOTES 🔹🔹🔹
-// Função para criar CI_LOTES
+// 🔹 Função para criar CI_LOTES
 async function cria_CI_LOTES() {
   console.log(`Criando CI_LOTES`);
   try {
@@ -434,60 +533,60 @@ async function cria_CI_LOTES() {
   }
 }
 
-// Função para LOAD DATA LOCAL INFILE
+// 🔹 Função para LOAD DATA LOCAL INFILE em CI_LOTES com tratamento de decimais
 async function preenche_CI_LOTES(arquivoPath) {
-
-  // Criar uma conexão especial para LOCAL INFILE
   const connection = await mysql.createConnection({
     ...dbConfig,
-    // Configuração crucial para mysql2 v2.0+
     streamFactory: (path) => fs.createReadStream(path),
-    infileStreamFactory: (path) => fs.createReadStream(path)
+    infileStreamFactory: (path) => fs.createReadStream(path),
   });
 
   try {
-    // Verificar se arquivo existe
+    // Verificar se o arquivo existe
     if (!fs.existsSync(arquivoPath)) {
       throw new Error(`Arquivo não encontrado: ${arquivoPath}`);
     }
 
-    const caminhoUnix = arquivoPath.replace(/\\/g, '/');
+    const caminhoUnix = arquivoPath.replace(/\\/g, "/");
+    console.log(`Preparando LOAD DATA LOCAL INFILE para CI_LOTES: ${caminhoUnix}`);
 
-    console.log(`Preparando LOAD DATA LOCAL INFILE: ${caminhoUnix}`);
-
-    // Query com LOCAL INFILE
+    // Query de importação com tratamento de decimais
     const query = `
       LOAD DATA LOCAL INFILE '${caminhoUnix}'
-      INTO TABLE CN_PONTOS
+      INTO TABLE CI_LOTES
       CHARACTER SET utf8
       FIELDS TERMINATED BY ';'
       LINES TERMINATED BY '\\n'
       IGNORE 1 ROWS
       (
-        COD_UNICO_ENDERECO, COD_UF, COD_MUNICIPIO, COD_DISTRITO, COD_SUBDISTRITO,
-        COD_SETOR, NUM_QUADRA, NUM_FACE, CEP, DSC_LOCALIDADE, NOM_TIPO_SEGLOGR,
-        NOM_TITULO_SEGLOGR, NOM_SEGLOGR, NUM_ENDERECO, DSC_MODIFICADOR,
-        NOM_COMP_ELEM1, VAL_COMP_ELEM1, NOM_COMP_ELEM2, VAL_COMP_ELEM2,
-        NOM_COMP_ELEM3, VAL_COMP_ELEM3, NOM_COMP_ELEM4, VAL_COMP_ELEM4,
-        NOM_COMP_ELEM5, VAL_COMP_ELEM5, LATITUDE, LONGITUDE, NV_GEO_COORD,
-        COD_ESPECIE, DSC_ESTABELECIMENTO, COD_INDICADOR_ESTAB_ENDERECO,
-        COD_INDICADOR_CONST_ENDERECO, COD_INDICADOR_FINALIDADE_CONST, COD_TIPO_ESPECI
+         COD_MUNICIPIO,
+         COD_UNICO_ENDERECO,
+         COD_SETOR,
+         NUM_QUADRA,
+         LOTE,
+         NOM_LOGRADOURO,
+         NUM_ENDERECO,
+         QTD_TESTADAS,
+         @DIM_TESTADA,
+         @DIM_LATERAL
       )
+      SET
+         DIM_TESTADA = REPLACE(@DIM_TESTADA, ',', '.'),
+         DIM_LATERAL = REPLACE(@DIM_LATERAL, ',', '.');
     `;
 
-    console.log('Executando carga de dados...');
-
     const [resultado] = await connection.query(query);
-
-    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    console.log(`✅ Importação concluída: ${resultado.affectedRows} registros inseridos.`);
     return resultado;
 
   } catch (error) {
-    console.error('Erro no LOAD DATA LOCAL INFILE:', error);
+    console.error("❌ Erro no LOAD DATA LOCAL INFILE (CI_LOTES):", error);
     throw error;
+
+  } finally {
+    await connection.end();
   }
 }
-
 
 module.exports = {
   testaConexao,
@@ -504,5 +603,6 @@ module.exports = {
   preenche_CN_QUADRAS,
   cria_CN_FACES,
   preenche_CN_FACES,
-  cria_CI_LOTES
+  cria_CI_LOTES,
+  preenche_CI_LOTES
 };
