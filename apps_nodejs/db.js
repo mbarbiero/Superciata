@@ -309,37 +309,7 @@ async function preenche_CN_PONTOS_UNICOS() {
         ST_GeomFromText(CONCAT('POINT(', LONGITUDE_MEDIA, ' ', LATITUDE_MEDIA, ')'))
       FROM TMP_ENDERECOS_UNICOS;
     `;
-
-  /*  // Query com LOCAL INFILE
-    const query = `
-      INSERT INTO CN_PONTOS_UNICOS (
-        COD_MUNICIPIO, COD_UNICO_ENDERECO, ID_QUADRA, ID_FACE,
-        NOM_LOGRADOURO, NUM_ENDERECO, LATITUDE, LONGITUDE, COORDS
-      )
-      SELECT 
-        COD_MUNICIPIO,
-        COD_UNICO_ENDERECO,
-        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
-        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
-        REPLACE(
-          CONCAT(
-            TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
-            TRIM(COALESCE(NOM_TITULO_SEGLOGR,'')), ' ',
-            TRIM(COALESCE(NOM_SEGLOGR,''))
-          ),
-          '  ', ' '
-        ) AS NOM_LOGRADOURO,
-        NUM_ENDERECO,
-        LATITUDE,
-        LONGITUDE,
-        ST_GeomFromText(CONCAT('POINT(', LONGITUDE, ' ', LATITUDE, ')'))
-      FROM CN_PONTOS
-      WHERE NUM_QUADRA > 0
-        AND NV_GEO_COORD < '4'
-      ORDER BY ID_QUADRA;
-    `;
-  */
-  console.log('Executando carga de dados...');
+    console.log('Executando carga de dados...');
   try {
     resultado = await executaQuery(query);
     resp = {

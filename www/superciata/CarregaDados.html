@@ -448,15 +448,31 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
-
-
     async function ProcessaCIATA() {
       var resposta, resultado;
 
       await EnviarArquivo();
-
+      await CriaCI_LOTES();
+      await PreencheCI_LOTES();
+    }
+    
+    async function CriaCI_LOTES() {
+      addMensagem("Criando tabela CI_LOTES...");
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CI_LOTES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
+    async function PreencheCI_LOTES(cod_municipio) {
+      addMensagem("Preenchendo CI_LOTES...");
+      resposta = await fetch(`https://smuu.com.br:21079/superciata/preenche_CI_LOTES?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
 
 
     // ==== DRAG & DROP ====

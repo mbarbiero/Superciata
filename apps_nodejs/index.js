@@ -447,5 +447,47 @@ app.get("/superciata/cria_CI_LOTES", async (req, res) => {
   }
 });
 
+// 🔹 Rota GET para carregar CSV em CI_LOTES
+app.get("/superciata/preenche_CI_LOTES", async (req, res) => {
+  try {
+    const { nmArquivo, cod_municipio } = req.query;
+    if (!nmArquivo) {
+      return res.json({
+        sucesso: false,
+        erro: "Parâmetro 'arquivo' é obrigatório"
+      });
+    }
+    const arquivoPath = path.join(CsvDir, nmArquivo);
+    if (!fs.existsSync(arquivoPath)) {
+      return res.json({
+        sucesso: false,
+        erro: `Arquivo não encontrado: ${arquivoPath}`
+      });
+    }
+
+    if (db.tabelaExiste('CI_LOTES')) {
+      await db.executaQuery(`delete from CI_LOTES where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
+    }
+    console.log('🔄 Tentando carregar CSV...');
+    const resultado = await db.preenche_CI_LOTES(arquivoPath);
+
+    arquivos.deletaArquivo(arquivoPath);
+
+    res.json({
+      sucesso: true,
+      mensagem: `Arquivo ${nmArquivo} carregado com sucesso!`,
+      linhas_afetadas: resultado.affectedRows
+    });
+
+  } catch (err) {
+    console.error("Erro ao carregar arquivo CSV:", err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Verifique se o arquivo existe e tem formato CSV válido"
+    });
+  }
+});
+
 
 
