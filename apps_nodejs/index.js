@@ -451,6 +451,8 @@ app.get("/superciata/cria_CI_LOTES", async (req, res) => {
 app.get("/superciata/preenche_CI_LOTES", async (req, res) => {
   try {
     const { nmArquivo, cod_municipio } = req.query;
+    console.log('preenche_CI_LOTES.cod_municipio', cod_municipio);
+
     if (!nmArquivo) {
       return res.json({
         sucesso: false,

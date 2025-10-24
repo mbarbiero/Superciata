@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selecionar Município - SuperCIATA</title>
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --text: #111;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .popup-container {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 30px 40px;
+      text-align: center;
+      width: 340px;
+    }
+
+    h2 { color: var(--brand-dark); margin-bottom: 20px; }
+
+    select, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: var(--brand-light);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover { background: var(--brand-dark); }
+
+    .msg {
+      font-size: 13px;
+      color: var(--brand-dark);
+      margin-top: 5px;
+    }
+
+    footer {
+      font-size: 12px;
+      color: #666;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-container">
+    <h2>Escolher Município</h2>
+
+    <select id="ufSelect">
+      <option value="">Selecione a UF...</option>
+    </select>
+
+    <select id="municipioSelect" disabled>
+      <option value="">Selecione o município...</option>
+    </select>
+
+    <button id="btnConfirmar" disabled>Confirmar</button>
+
+    <div class="msg" id="msg"></div>
+    <footer>SuperCIATA — Geoespacialização Urbana</footer>
+  </div>
+
+  <script>
+    async function carregarMunicipios() {
+      const ufSelect = document.getElementById('ufSelect');
+      const municipioSelect = document.getElementById('municipioSelect');
+      const btnConfirmar = document.getElementById('btnConfirmar');
+      const msg = document.getElementById('msg');
+
+      try {
+        const resposta = await fetch('municipios.json');
+        const dados = await resposta.json();
+
+        // Popula UFs
+        const ufs = Object.keys(dados).sort();
+        ufs.forEach(uf => {
+          const opt = document.createElement('option');
+          opt.value = uf;
+          opt.textContent = uf;
+          ufSelect.appendChild(opt);
+        });
+
+        // Seleciona UF
+        ufSelect.addEventListener('change', () => {
+          municipioSelect.innerHTML = '<option value="">Selecione o município...</option>';
+          municipioSelect.disabled = true;
+          btnConfirmar.disabled = true;
+          msg.textContent = '';
+
+          const uf = ufSelect.value;
+          if (!uf) return;
+
+          const lista = dados[uf];
+          lista.sort((a,b) => a.nome.localeCompare(b.nome));
+          lista.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.codigo;
+            opt.textContent = m.nome;
+            municipioSelect.appendChild(opt);
+          });
+          municipioSelect.disabled = false;
+        });
+
+        municipioSelect.addEventListener('change', () => {
+          btnConfirmar.disabled = municipioSelect.value === "";
+        });
+
+        btnConfirmar.addEventListener('click', () => {
+          const cod = municipioSelect.value;
+          const nome = municipioSelect.options[municipioSelect.selectedIndex].text;
+          const uf = ufSelect.value;
+
+          localStorage.setItem('cod_municipio', cod);
+          localStorage.setItem('nome_municipio', nome);
+          localStorage.setItem('uf_municipio', uf);
+          msg.textContent = `Município salvo: ${nome} (${uf})`;
+
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ tipo: "municipioSelecionado", nome, uf, cod }, "*");
+          }
+
+          setTimeout(() => window.close(), 1000);
+        });
+      } catch (e) {
+        msg.textContent = "Erro ao carregar o arquivo JSON.";
+      }
+    }
+
+    carregarMunicipios();
+  </script>
+</body>
+</html>

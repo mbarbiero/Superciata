@@ -59,7 +59,7 @@
     }
 
     .upload-container {
-      max-width: 800px;
+      max-width: 960px;
       margin: 30px auto;
       padding: 0 24px;
       flex: 1;
@@ -158,7 +158,7 @@
       margin-top: 20px;
       padding: 12px;
       min-height: 100px;
-      max-height: 250px;
+      max-height: 350px;
       overflow-y: auto;
       font-size: 13px;
       color: #333;
@@ -247,7 +247,18 @@
   </header>
 
   <main class="upload-container">
-    <h1 style="text-align:center; margin-bottom:25px;">Upload de Arquivos - SuperCIATA</h1>
+    <h1 style="text-align:center; margin-bottom:25px;">Carga de Arquivos - CNEFE e CIATA</h1>
+
+    <div style="text-align:center; margin-bottom:25px;">
+      <label><b>Município selecionado:</b></label><br>
+      <span id="municipioAtual" style="display:inline-block; margin:8px 0; color:#004aad; font-weight:500;">
+        Nenhum município selecionado
+      </span><br>
+      <button id="btnEscolherMunicipio"
+        style="background:#0073e6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
+        Escolher Município
+      </button>
+    </div>
 
     <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📁</div>
@@ -323,7 +334,7 @@
         var resultado = await resposta.json();
         if (resultado.sucesso) {
           addMensagem("✅ " + (resultado.mensagem || "Processamento concluído com sucesso!"), "ok");
-          cod_municipio = retCodMunicipio(arquivo.name);
+          //cod_municipio = retCodMunicipio(arquivo.name);
           nmArquivoCSV = arquivo.name.replace(/\.zip/i, '.csv');
           if (cod_municipio.length > 0) {
             addMensagem(`✅ Código do Município: ${cod_municipio}`, "ok");
@@ -453,9 +464,9 @@
 
       await EnviarArquivo();
       await CriaCI_LOTES();
-      await PreencheCI_LOTES();
+      await PreencheCI_LOTES(cod_municipio);
     }
-    
+
     async function CriaCI_LOTES() {
       addMensagem("Criando tabela CI_LOTES...");
       resposta = await fetch(`https://smuu.com.br:21079/superciata/cria_CI_LOTES`, {
@@ -516,6 +527,36 @@
 
     // Inicializar estado dos botões
     atualizarEstadoBotoes();
+
+    // Atualiza o nome do município na tela
+    function atualizarMunicipioAtual() {
+      cod_municipio = localStorage.getItem('cod_municipio');
+      const nome = localStorage.getItem('nome_municipio');
+      const uf = localStorage.getItem('uf_municipio');
+      const span = document.getElementById('municipioAtual');
+      span.textContent = nome && uf ? `${nome} (${uf})` : "Nenhum município selecionado";
+    }
+
+    // Abre popup para escolher município
+    document.getElementById('btnEscolherMunicipio').addEventListener('click', () => {
+      const popup = window.open(
+        "escolher_municipio.html",
+        "popupMunicipio",
+        "width=420,height=480,resizable=no,scrollbars=no"
+      );
+
+      // Quando o popup fecha, atualiza automaticamente o nome
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          atualizarMunicipioAtual();
+        }
+      }, 500);
+    });
+
+    // Chamada inicial ao carregar a página
+    document.addEventListener("DOMContentLoaded", atualizarMunicipioAtual);
+
   </script>
 </body>
 
