@@ -80,48 +80,6 @@ app.get("/superciata/lista_arquivos", async (req, res) => {
   }
 });
 
-// 🔹🔹🔹 CN_FACES 🔹🔹🔹
-// 🔹 Rota GET para criar a tabela CN_FACES com o centroide das faces
-app.get('/superciata/cria_CN_FACES', async (req, res) => {
-  try {
-    const resultado = await db.cria_CN_FACES();
-    res.json({
-      sucesso: true,
-      detalhes: "Tabela CN_FACES OK"
-    });
-  } catch (err) {
-    console.log(err);
-    res.json({
-      sucesso: false,
-      erro: err.message,
-      detalhes: "Erro ao criar o arquivo CN_FACES"
-    });
-  }
-});
-
-// 🔹 Rota GET para preencher CN_FACES
-app.get('/superciata/preenche_CN_FACES', async (req, res) => {
-  const { cod_municipio } = req.query;
-
-  try {
-    const resultado = await db.executaQuery(`delete from CN_FACES where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros
-    console.log(resultado);
-  } catch (err) {
-    console.log(err);
-  }
-
-  try {
-    const resultado = await db.preenche_CN_FACES();
-    res.json(resultado);
-  } catch (err) {
-    console.log(err);
-    res.json({
-      sucesso: false,
-      erro: err.message,
-      detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
-    });
-  }
-});
 
 // 🔹 Rota GET para buscar faces por código de município
 app.get('/superciata/retorna_CN_FACES', async (req, res) => {
@@ -167,6 +125,116 @@ app.get('/superciata/retorna_CN_FACES', async (req, res) => {
     });
   }
 });
+
+// 🔹 Rota POST para upload do ZIP
+app.post("/superciata/carrega_arqZip", upload.single("arqZip"), async (req, res) => {
+  try {
+    const zipPath = req.file.path;
+
+    await fs.createReadStream(zipPath)
+      .pipe(unzipper.Extract({ path: CsvDir }))
+      .promise();
+
+    arquivos.deletaArquivo(zipPath);
+
+    res.json({
+      sucesso: true,
+      mensagem: `ZIP recebido e descompactado em ${CsvDir}`,
+    });
+  } catch (err) {
+    res.json({
+      sucesso: false,
+      mensagem: err.message,
+    });
+  }
+});
+
+// 🔹🔹🔹 CN_LOGRADOUROS 🔹🔹🔹
+// 🔹 Rota GET para criar a tabela CN_LOGRADOUROS 
+app.get('/superciata/cria_CN_LOGRADOUROS', async (req, res) => {
+  try {
+    const resultado = await db.cria_CN_LOGRADOUROS();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CN_LOGRADOUROS OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar o arquivo CN_LOGRADOUROS"
+    });
+  }
+});
+
+// 🔹 Rota GET para preencher CN_LOGRADOUROS
+app.get('/superciata/preenche_CN_LOGRADOUROS', async (req, res) => {
+  const { cod_municipio } = req.query;
+
+  try {
+    const resultado = await db.executaQuery(`delete from CN_LOGRADOUROS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros
+    console.log(resultado);
+  } catch (err) {
+    console.log(err);
+  }
+
+  try {
+    const resultado = await db.preenche_CN_LOGRADOUROS(cod_municipio);
+    res.json(resultado);
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao preencher o arquivo CN_LOGRADOUROS"
+    });
+  }
+});
+
+// 🔹🔹🔹 CN_FACES 🔹🔹🔹
+// 🔹 Rota GET para criar a tabela CN_FACES com o centroide das faces
+app.get('/superciata/cria_CN_FACES', async (req, res) => {
+  try {
+    const resultado = await db.cria_CN_FACES();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CN_FACES OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar o arquivo CN_FACES"
+    });
+  }
+});
+
+// 🔹 Rota GET para preencher CN_FACES
+app.get('/superciata/preenche_CN_FACES', async (req, res) => {
+  const { cod_municipio } = req.query;
+
+  try {
+    const resultado = await db.executaQuery(`delete from CN_FACES where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros
+    console.log(resultado);
+  } catch (err) {
+    console.log(err);
+  }
+
+  try {
+    const resultado = await db.preenche_CN_FACES();
+    res.json(resultado);
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
+    });
+  }
+});
+
 
 // 🔹🔹🔹 CN_QUADRAS 🔹🔹🔹
 // 🔹 Rota GET para criar a tabela CN_QUADRAS com o centroide das quadras
@@ -276,7 +344,6 @@ app.get("/superciata/cria_CN_PONTOS_UNICOS", async (req, res) => {
 // 🔹 Rota GET para povoar a tabela CN_PONTOS_UNICOS
 app.get("/superciata/preenche_CN_PONTOS_UNICOS", async (req, res) => {
   const { cod_municipio } = req.query;
-  console.log(`cod_municipio = ${cod_municipio}`);
 
   try {
     const resultado = await db.executaQuery(`delete from CN_PONTOS_UNICOS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros
@@ -320,8 +387,7 @@ app.get('/superciata/retorna_CN_PONTOS_UNICOS', async (req, res) => {
                 NUM_ENDERECO,
                 ST_AsText(COORDS) AS COORDS 
             FROM CN_PONTOS_UNICOS
-            WHERE COD_MUNICIPIO = ?
-            AND ID_QUADRA = "313170305000073P005"
+            WHERE COD_MUNICIPIO = ?;
         `;
 
     const resultados = await db.executaQuery(sql, [cod_municipio]);
@@ -401,29 +467,6 @@ app.get("/superciata/preenche_CN_PONTOS", async (req, res) => {
       sucesso: false,
       erro: err.message,
       detalhes: "Verifique se o arquivo existe e tem formato CSV válido"
-    });
-  }
-});
-
-// 🔹 Rota POST para upload do ZIP
-app.post("/superciata/carrega_arqZip", upload.single("arqZip"), async (req, res) => {
-  try {
-    const zipPath = req.file.path;
-
-    await fs.createReadStream(zipPath)
-      .pipe(unzipper.Extract({ path: CsvDir }))
-      .promise();
-
-    arquivos.deletaArquivo(zipPath);
-
-    res.json({
-      sucesso: true,
-      mensagem: `ZIP recebido e descompactado em ${CsvDir}`,
-    });
-  } catch (err) {
-    res.json({
-      sucesso: false,
-      mensagem: err.message,
     });
   }
 });

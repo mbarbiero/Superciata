@@ -309,7 +309,7 @@ async function preenche_CN_PONTOS_UNICOS() {
         ST_GeomFromText(CONCAT('POINT(', LONGITUDE_MEDIA, ' ', LATITUDE_MEDIA, ')'))
       FROM TMP_ENDERECOS_UNICOS;
     `;
-    console.log('Executando carga de dados...');
+  console.log('Executando carga de dados...');
   try {
     resultado = await executaQuery(query);
     resp = {
@@ -323,6 +323,65 @@ async function preenche_CN_PONTOS_UNICOS() {
 
   } catch (error) {
     console.error('Erro ao preencher dados na tabela CN_PONTOS_UNICOS:', error);
+    throw error;
+  }
+}
+
+async function cria_CN_LOGRADOUROS() {
+  console.log(`Criando CN_LOGRADOUROS`);
+  const query = `
+      CREATE TABLE IF NOT EXISTS CN_LOGRADOUROS (
+        SC_ID_LOGRADOURO     VARCHAR(8),   
+        COD_MUNICIPIO        VARCHAR(7),
+        NOM_LOGRADOURO       VARCHAR(250),
+        COORDS               TEXT
+      );`
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_LOGRADOUROS criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Função para preencher CN_LOGRADOUROS
+async function preenche_CN_LOGRADOUROS(cod_municipio) {
+
+  console.log(`Preparando preenche_CN_LOGRADOUROS`);
+
+  const query = `
+    INSERT INTO CN_LOGRADOUROS (COD_MUNICIPIO, NOM_LOGRADOURO, SC_ID_LOGRADOURO, COORDS)
+      SELECT 
+          COD_MUNICIPIO,
+          NOM_LOGRADOURO,
+          HEX(CRC32(CONCAT(COD_MUNICIPIO, NOM_LOGRADOURO))) AS SC_ID_LOGRADOURO,
+          ""
+      FROM CN_PONTOS_UNICOS
+      WHERE COD_MUNICIPIO = ${cod_municipio}  
+      GROUP BY COD_MUNICIPIO, NOM_LOGRADOURO;
+  `;
+
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_LOGRADOUROS preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
+
+    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CN_FACES:', error);
     throw error;
   }
 }
@@ -569,6 +628,8 @@ module.exports = {
   preenche_CN_PONTOS,
   cria_CN_PONTOS_UNICOS,
   preenche_CN_PONTOS_UNICOS,
+  cria_CN_LOGRADOUROS,
+  preenche_CN_LOGRADOUROS,
   cria_CN_QUADRAS,
   preenche_CN_QUADRAS,
   cria_CN_FACES,
