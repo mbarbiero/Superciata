@@ -32,7 +32,6 @@
       position: sticky;
       top: 0;
       z-index: 1000;
-      flex-wrap: wrap;
     }
 
     header .logo img {
@@ -55,13 +54,13 @@
     #map {
       flex: 1;
       width: 100%;
-      height: calc(100vh - 210px);
+      height: calc(100vh - 180px);
       z-index: 0;
     }
 
     main {
       position: absolute;
-      top: 140px;
+      top: 90px;
       left: 0;
       right: 0;
       display: flex;
@@ -115,39 +114,6 @@
       margin-top: auto;
     }
 
-    /* 🔹 Bloco do município */
-    .municipio-box {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      background: #fafafa;
-      padding: 8px 14px;
-      text-align: center;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-
-    .municipio-box span {
-      display: inline-block;
-      margin-top: 4px;
-      color: var(--brand-dark);
-      font-weight: 600;
-    }
-
-    .municipio-box button {
-      margin-top: 6px;
-      background: var(--brand-light);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .municipio-box button:hover {
-      background: var(--brand-dark);
-    }
-
     @media (max-width: 768px) {
       main {
         flex-direction: column;
@@ -167,14 +133,7 @@
     <div class="logo">
       <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
     </div>
-    <div style="text-align:center;">
-      <h1 style="font-size:1.5rem; color:#004aad; margin:0;">Visualização do Processamento</h1>
-      <div class="municipio-box">
-        <div><b>Município atual:</b></div>
-        <span id="municipioAtual">Nenhum município selecionado</span><br>
-        <button id="btnEscolherMunicipio">Escolher Município</button>
-      </div>
-    </div>
+    <h1 style="font-size:1.5rem; color:#004aad; margin:0;">Visualização do Processamento</h1>
     <nav>
       <a href="index.html">Início</a>
       <a href="javascript:history.back()">Voltar</a>
@@ -184,19 +143,19 @@
   <div id="map"></div>
 
   <main>
-    <a id="linkPontos" class="card">
+    <a href="https://superciata.smuu.com.br/vis_pontos_unicos_CNEFE.html" class="card">
       <div class="icon">📍</div>
       <h3>Pontos Únicos - CNEFE</h3>
       <p>Visualize os pontos únicos gerados a partir do cadastro CNEFE.</p>
     </a>
 
-    <a id="linkQuadras" class="card">
+    <a href="https://superciata.smuu.com.br/vis_quadras_CNEFE.html" class="card">
       <div class="icon">🧱</div>
       <h3>Quadras - CNEFE</h3>
       <p>Veja a espacialização das quadras criadas a partir dos logradouros.</p>
     </a>
 
-    <a id="linkFaces" class="card">
+    <a href="https://superciata.smuu.com.br/vis_faces_CNEFE.html" class="card">
       <div class="icon">🧩</div>
       <h3>Faces - CNEFE</h3>
       <p>Explore as faces urbanas e suas relações espaciais.</p>
@@ -211,38 +170,14 @@
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Atualiza o nome do município no header
-    function atualizarMunicipioAtual() {
-      const nome = localStorage.getItem('nome_municipio');
-      const uf = localStorage.getItem('uf_municipio');
-      const span = document.getElementById('municipioAtual');
-      span.textContent = nome && uf ? `${nome} (${uf})` : "Nenhum município selecionado";
-    }
-
-    // Botão para escolher município
-    document.getElementById('btnEscolherMunicipio').addEventListener('click', () => {
-      const popup = window.open(
-        "escolher_municipio.html",
-        "popupMunicipio",
-        "width=420,height=480,resizable=no,scrollbars=no"
-      );
-      const timer = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(timer);
-          atualizarMunicipioAtual();
-        }
-      }, 500);
-    });
-
-    atualizarMunicipioAtual();
-
-    // === CÓDIGO ORIGINAL ===
+    // Inicializa o mapa de fundo
     const map = L.map('map').setView([-15.8, -47.9], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
+    // Opcional: centralizar no município selecionado
     const lat = localStorage.getItem('lat_municipio');
     const lon = localStorage.getItem('lon_municipio');
     const codMunicipio = localStorage.getItem('cod_municipio');
@@ -250,19 +185,6 @@
     if (lat && lon) {
       map.setView([parseFloat(lat), parseFloat(lon)], 13);
     }
-
-    function gerarLink(baseUrl) {
-      if (codMunicipio) {
-        return `${baseUrl}?cod_municipio=${encodeURIComponent(codMunicipio)}`;
-      } else {
-        alert("Código do município não definido.");
-        return "#";
-      }
-    }
-
-    document.getElementById("linkPontos").href = gerarLink("https://superciata.smuu.com.br/vis_pontos_unicos_CNEFE.html");
-    document.getElementById("linkQuadras").href = gerarLink("https://superciata.smuu.com.br/vis_quadras_CNEFE.html");
-    document.getElementById("linkFaces").href = gerarLink("https://superciata.smuu.com.br/vis_faces_CNEFE.html");
   </script>
 </body>
 

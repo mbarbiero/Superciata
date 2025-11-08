@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centroides das Quadras</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 10px 15px;
+      background-color: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.2em;
+      color: #004aad;
+      font-family: arial bold, Helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    #mapa {
+      flex-grow: 1;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Centroides das Quadras</h1>
+  </header>
+  <div id="mapa"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const mapa = L.map('mapa').setView([-15.78, -47.93], 5);
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
+    const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    L.control.layers({ "Mapa de Ruas": osm, "Imagem de Satélite": satelite }).addTo(mapa);
+
+    const params = new URLSearchParams(window.location.search);
+    const cod_municipio = params.get("cod_municipio") || '4301800';
+
+    function parseCoords(coords) {
+      const match = coords.match(/POINT\(([-0-9.]+) ([-0-9.]+)\)/);
+      return match ? [parseFloat(match[2]), parseFloat(match[1])] : null;
+    }
+
+    const quadraIcon = L.divIcon({
+      className: 'quadra-icon',
+      html: '<div style="background:#007a33;width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>',
+      iconSize: [12, 12]
+    });
+
+    async function carregarQuadras(cod_municipio) {
+      try {
+        const url = `https://superciata.smuu.com.br:21079/superciata/retorna_CN_QUADRAS?cod_municipio=${cod_municipio}`;
+        const resp = await fetch(url);
+        const dados = await resp.json();
+
+        // 🔹 Verifica se veio um array e se está vazio
+        if (!Array.isArray(dados) || dados.length === 0) {
+          //console.warn("⚠️ Nenhum ponto encontrado para o município:", cod_municipio);
+          alert(`Nenhuma quadra CNEFE foi encontrada para o município ${cod_municipio}.\nVerifique se foi feita a carga de dados.`);
+          return;
+        }
+
+        const markers = [];
+        dados.forEach(quadra => {
+          const coords = parseCoords(quadra.CENTROIDE);
+          if (!coords) return;
+
+          const marker = L.marker(coords, { icon: quadraIcon }).addTo(mapa);
+          marker.bindPopup(`
+            <b>Quadra:</b> ${quadra.ID_QUADRA}<br>
+            <b>Pontos:</b> ${quadra.QTD_PONTOS}<br>
+            <b>Lat:</b> ${coords[0].toFixed(6)}<br>
+            <b>Lng:</b> ${coords[1].toFixed(6)}
+          `);
+          markers.push(marker);
+        });
+
+        if (markers.length > 0) {
+          mapa.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
+        }
+      } catch (e) {
+        console.error("Erro ao carregar quadras:", e);
+      }
+    }
+
+    carregarQuadras(cod_municipio);
+  </script>
+</body>
+
+</html>
