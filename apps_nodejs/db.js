@@ -54,9 +54,18 @@ async function tabelaExiste(nomeTabela = 'CN_PONTOS') {
 
 // Função para criar tabela CN_PONTOS
 async function cria_CN_PONTOS(tabela = 'CN_PONTOS') {
+  const dropTableCN_PONTOS = 'DROP TABLE CN_PONTOS IF EXISTS;';
+  console.log(dropTableCN_PONTOS);
+  try {
+    await executaQuery(dropTableCN_PONTOS);
+    console.log('Tabela CN_PONTOS excluída com sucesso');
+    return true;
+  } catch (error) {
+    console.error('Erro ao excluir tabela:', error);
+    return false;
+  }
 
   console.log('Criando tabela CN_PONTOS...');
-
   const createTableCN_PONTOS = `
     CREATE TABLE IF NOT EXISTS CN_PONTOS (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -141,6 +150,8 @@ async function preenche_CN_PONTOS(arquivoPath) {
     if (!fs.existsSync(arquivoPath)) {
       throw new Error(`Arquivo não encontrado: ${arquivoPath}`);
     }
+
+
 
     const caminhoUnix = arquivoPath.replace(/\\/g, '/');
     console.log(`Preparando LOAD DATA LOCAL INFILE: ${caminhoUnix}`);
@@ -381,7 +392,7 @@ async function preenche_CN_LOGRADOUROS(cod_municipio) {
     return resp;
 
   } catch (error) {
-    console.error('Erro ao preencher dados na tabela CN_FACES:', error);
+    console.error('Erro ao preencher dados na tabela CN_LOGRADOUROS:', error);
     throw error;
   }
 }
