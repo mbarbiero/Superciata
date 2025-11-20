@@ -2,6 +2,7 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const CI = require('./ciata.js');
+const util = require('./util.js');
 
 const dbConfig = {
   host: 'mysql.smuu.com.br',
@@ -121,7 +122,7 @@ async function cria_CN_PONTOS(tabela = 'CN_PONTOS') {
 async function executaQuery(sql, params = []) {
   const connection = await pool.getConnection();
   try {
-    console.log(`Executando query: ${sql.substring(0, 100)}...`);
+    //console.log(`Executando query: ${sql.substring(0, 100)}...`);
     const [resultado] = await connection.execute(sql, params);
     return resultado;
   }
@@ -601,18 +602,16 @@ async function preenche_CI_LOTES(arquivoPath) {
       (
          COD_MUNICIPIO,
          COD_UNICO_ENDERECO,
-         COD_SETOR,
          NUM_QUADRA,
-         LOTE,
          NOM_LOGRADOURO,
          NUM_ENDERECO,
-         QTD_TESTADAS,
+         NOM_LOGRADOURO_ADJACENTE,
          @DIM_TESTADA,
-         @DIM_LATERAL
+         @DIM_PROFUNDIDADE
       )
       SET
          DIM_TESTADA = REPLACE(@DIM_TESTADA, ',', '.'),
-         DIM_LATERAL = REPLACE(@DIM_LATERAL, ',', '.');
+         DIM_PROFUNDIDADE = REPLACE(@DIM_PROFUNDIDADE, ',', '.');
     `;
 
     const [resultado] = await connection.query(query);
@@ -627,6 +626,104 @@ async function preenche_CI_LOTES(arquivoPath) {
     await connection.end();
   }
 }
+
+// 🔹 Função para normalizar CI_LOTES
+async function normaliza_CI_LOTES(cod_municipio) {
+  console.log(`Normalizando CI_LOTES`);
+  const query = `
+      UPDATE CI_LOTES
+        SET NOM_LOGRADOURO = TrocaAbreviaturas(NormalizaString(NOM_LOGRADOURO))
+      WHERE 
+        COD_MUNICIPIO = "${cod_municipio}";`;
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_LOTES normalizada com sucesso.",
+      "linhas modificadas": resultado.affectedRows
+    }
+
+    console.log(`Normalização concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao normalizar dados na tabela CI_LOTES:', error);
+    throw error;
+  }
+}
+
+
+// 🔹🔹🔹 SC_LOGRADOUROS 🔹🔹🔹
+// 🔹 Função para criar SC_LOGRADOUROS
+async function cria_SC_LOGRADOUROS() {
+  console.log(`Criando SC_LOGRADOUROS`);
+  try {
+    const resultado = await executaQuery(CI.SQL_CriaSC_LOGRADOUROS);
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// 🔹 Função para preencher SC_LOGRADOUROS
+async function preenche_SC_LOGRADOUROS() {
+  console.log('Preenchendo SC_LOGRADOUROS');
+
+  var resultado = '';
+  try {
+    const query = `
+      SELECT DISTINCT 
+        COD_MUNICIPIO,
+        NOM_LOGRADOURO
+      FROM CI_LOTES;
+    `
+    const linhas = await executaQuery(query);
+
+    for (const linha of linhas) {
+      const normalizado = util.TrocaAbreviaturas(util.NormalizaString(linha.NOM_LOGRADOURO));
+
+      const query = `
+        INSERT INTO SC_LOGRADOUROS (
+          SC_ID_LOGRADOURO, 
+          COD_MUNICIPIO,
+          SC_NOM_LOGRADOURO, 
+          CI_NOM_LOGRADOURO,
+          COORDS
+        ) VALUES (
+          "",
+          ${linha.COD_MUNICIPIO},
+          "${normalizado}",
+          "${linha.NOM_LOGRADOURO}",
+          ""
+        );
+      `
+      resultado = await executaQuery(query);
+    }
+  } catch (error) {
+    console.log('Erro em dados de CI_LOTES', resultado);
+    throw error;
+  }
+
+  // Nomes de logradouros coincidentes em CI e CN
+  try {
+      const query = `
+        UPDATE smuu.SC_LOGRADOUROS AS SC
+          JOIN smuu.CN_LOGRADOUROS AS CN
+            ON 
+              SC.SC_NOM_LOGRADOURO = CN.NOM_LOGRADOURO 
+            AND 
+              SC.COD_MUNICIPIO = CN.COD_MUNICIPIO
+          SET SC.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
+        WHERE (SC.SC_ID_LOGRADOURO = '' OR SC.SC_ID_LOGRADOURO <> CN.SC_ID_LOGRADOURO);`
+    resultado = await executaQuery(query);
+    console.log('Dados de CN.SC_ID_LOGRADOURO', resultado);
+  } catch (error) {
+    console.log('Erro em dados de CN.SC_ID_LOGRADOURO', resultado);
+    throw error;
+  }
+}
+
 
 module.exports = {
   testaConexao,
@@ -646,5 +743,8 @@ module.exports = {
   cria_CN_FACES,
   preenche_CN_FACES,
   cria_CI_LOTES,
-  preenche_CI_LOTES
+  preenche_CI_LOTES,
+  normaliza_CI_LOTES,
+  cria_SC_LOGRADOUROS,
+  preenche_SC_LOGRADOUROS
 };
