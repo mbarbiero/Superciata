@@ -249,9 +249,9 @@ async function preenche_CN_PONTOS_UNICOS() {
         LATITUDE,
         LONGITUDE
       FROM CN_PONTOS
-      WHERE NUM_QUADRA > 0
-        AND NV_GEO_COORD < '4';
+      WHERE NV_GEO_COORD < '4';
     `;
+    // somente quadras urbanas?      --WHERE NUM_QUADRA > 0 AND NV_GEO_COORD < '4';
     resultado = await executaQuery(query);
     console.log(resultado);
 
@@ -371,7 +371,7 @@ async function preenche_CN_LOGRADOUROS(cod_municipio) {
       SELECT 
           COD_MUNICIPIO,
           NOM_LOGRADOURO,
-          HEX(CRC32(CONCAT(COD_MUNICIPIO, NOM_LOGRADOURO))) AS SC_ID_LOGRADOURO,
+          LPAD(HEX(CRC32(CONCAT(COD_MUNICIPIO, NOM_LOGRADOURO))), 8, '0') AS SC_ID_LOGRADOURO,
           ""
       FROM CN_PONTOS_UNICOS
       WHERE COD_MUNICIPIO = ${cod_municipio}  
@@ -438,9 +438,9 @@ async function cria_CN_QUADRAS() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       ID_QUADRA            VARCHAR(19),
       COD_MUNICIPIO VARCHAR(7),
+      SC_ID_QUADRA VARCHAR(250),
       QTD_PONTOS INT,
-      CENTROIDE POINT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      CENTROIDE POINT
     );`
   try {
     await executaQuery(query);
@@ -461,11 +461,12 @@ async function preenche_CN_QUADRAS() {
   console.log(`Preparando CN_QUADRAS`);
 
   const query = `
-    INSERT INTO CN_QUADRAS (ID_QUADRA, COD_MUNICIPIO, QTD_PONTOS,
+    INSERT INTO CN_QUADRAS (ID_QUADRA, COD_MUNICIPIO, SC_ID_QUADRA, QTD_PONTOS,
         CENTROIDE)
     SELECT
         ID_QUADRA,
         COD_MUNICIPIO,
+        "",
         COUNT(*) AS QTD_PONTOS,
         POINT(AVG(LONGITUDE), AVG(LATITUDE)) AS CENTROIDE
     FROM CN_PONTOS_UNICOS
@@ -482,12 +483,54 @@ async function preenche_CN_QUADRAS() {
       "mensagem": "Tabela CN_QUADRAS preenchida com sucesso.",
       "linhas incluídas": resultado.affectedRows
     }
-
     console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
     return resp;
-
   } catch (error) {
     console.error('Erro ao preencher dados na tabela CN_QUADRAS:', error);
+    throw error;
+  }
+}
+
+// Função para preencher SC_ID_QUADRA em CN_QUADRAS
+async function complementa_CN_QUADRAS() {
+
+  console.log(`Preenchendo SC_ID_QUADRA em CN_QUADRAS`);
+
+  const query = `
+      UPDATE CN_QUADRAS q
+      JOIN (
+          SELECT 
+              f.ID_QUADRA,
+              CONCAT(
+                  '[',
+                  GROUP_CONCAT(
+                      DISTINCT CONCAT('"', l.SC_ID_LOGRADOURO, '"')
+                      ORDER BY l.SC_ID_LOGRADOURO SEPARATOR ','
+                  ),
+                  ']'
+              ) AS SC_ID_QUADRA
+          FROM CN_FACES f
+          INNER JOIN CN_LOGRADOUROS l
+              ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
+              AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
+          GROUP BY f.ID_QUADRA
+      ) AS x
+          ON x.ID_QUADRA = q.ID_QUADRA
+      SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;
+  `;
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "A chave SC_ID_QUADRA foi preenchida com sucesso.",
+      "linhas atualizadas": resultado.affectedRows
+    }
+    console.log(`Atualização concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+  } catch (error) {
+    console.error('Erro ao atualizar SC_ID_QUADRAS na tabela CN_QUADRAS:', error);
     throw error;
   }
 }
@@ -707,7 +750,7 @@ async function preenche_SC_LOGRADOUROS() {
 
   // Nomes de logradouros coincidentes em CI e CN
   try {
-      const query = `
+    const query = `
         UPDATE smuu.SC_LOGRADOUROS AS SC
           JOIN smuu.CN_LOGRADOUROS AS CN
             ON 
@@ -720,6 +763,28 @@ async function preenche_SC_LOGRADOUROS() {
     console.log('Dados de CN.SC_ID_LOGRADOURO', resultado);
   } catch (error) {
     console.log('Erro em dados de CN.SC_ID_LOGRADOURO', resultado);
+    throw error;
+  }
+
+  
+  // Nomes de logradouros SOUNDEX em CI e CN
+  try {
+    const query = `
+      UPDATE smuu.SC_LOGRADOUROS AS SC
+      JOIN smuu.CN_LOGRADOUROS AS CN
+        ON 
+          SOUNDEX(SC.SC_NOM_LOGRADOURO) = SOUNDEX(CN.NOM_LOGRADOURO)
+        AND 
+          SC.COD_MUNICIPIO = CN.COD_MUNICIPIO
+      SET 
+        SC.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
+      WHERE 
+        (SC.SC_ID_LOGRADOURO = '' 
+        OR SC.SC_ID_LOGRADOURO <> CN.SC_ID_LOGRADOURO);`
+    resultado = await executaQuery(query);
+    console.log('Dados de CN.SC_ID_LOGRADOURO - SOUNDEX', resultado);
+  } catch (error) {
+    console.log('Erro em dados de CN.SC_ID_LOGRADOURO - SOUNDEX', resultado);
     throw error;
   }
 }
@@ -740,6 +805,7 @@ module.exports = {
   preenche_CN_LOGRADOUROS,
   cria_CN_QUADRAS,
   preenche_CN_QUADRAS,
+  complementa_CN_QUADRAS, 
   cria_CN_FACES,
   preenche_CN_FACES,
   cria_CI_LOTES,

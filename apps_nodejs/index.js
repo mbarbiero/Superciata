@@ -230,7 +230,7 @@ app.get('/superciata/preenche_CN_FACES', async (req, res) => {
     res.json({
       sucesso: false,
       erro: err.message,
-      detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
+      detalhes: "Erro ao preencher o arquivo CN_FACES"
     });
   }
 });
@@ -275,6 +275,24 @@ app.get('/superciata/preenche_CN_QUADRAS', async (req, res) => {
       sucesso: false,
       erro: err.message,
       detalhes: "Erro ao preencher o arquivo CN_QUADRAS"
+    });
+  }
+});
+
+
+// 🔹 Rota GET para complementar CN_QUADRAS com a chave SC_ID_QUADRA
+app.get('/superciata/complementa_CN_QUADRAS', async (req, res) => {
+  const { cod_municipio } = req.query;
+
+  try {
+    const resultado = await db.complementa_CN_QUADRAS();
+    res.json(resultado);
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao preencher CN_QUADRAS com SC_ID_QUADRA"
     });
   }
 });
