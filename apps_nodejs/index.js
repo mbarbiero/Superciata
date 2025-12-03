@@ -552,47 +552,47 @@ app.get("/superciata/preenche_CI_LOTES", async (req, res) => {
   }
 });
 
-// 🔹 Rota GET para criar a tabela SC_LOGRADOUROS
-app.get("/superciata/cria_SC_LOGRADOUROS", async (req, res) => {
+// 🔹 Rota GET para criar a tabela CI_LOGRADOUROS
+app.get("/superciata/cria_CI_LOGRADOUROS", async (req, res) => {
   try {
-    const resultado = await db.cria_SC_LOGRADOUROS();
+    const resultado = await db.cria_CI_LOGRADOUROS();
     res.json({
       sucesso: true,
-      detalhes: "Tabela SC_LOGRADOUROS OK"
+      detalhes: "Tabela CI_LOGRADOUROS OK"
     });
   } catch (err) {
     console.log(err);
     res.json({
       sucesso: false,
       erro: err.message,
-      detalhes: "Erro ao criar a tabela SC_LOGRADOUROS"
+      detalhes: "Erro ao criar a tabela CI_LOGRADOUROS"
     });
   }
 });
 
-// 🔹 Rota GET para carregar dados em SC_LOGRADOUROS
-app.get("/superciata/preenche_SC_LOGRADOUROS", async (req, res) => {
+// 🔹 Rota GET para carregar dados em CI_LOGRADOUROS
+app.get("/superciata/preenche_CI_LOGRADOUROS", async (req, res) => {
   try {
     const { cod_municipio } = req.query;
 
-    if (db.tabelaExiste('SC_LOGRADOUROS')) {
+    if (db.tabelaExiste('CI_LOGRADOUROS')) {
       console.log("cod_municipio", cod_municipio);
-      await db.executaQuery(`delete from SC_LOGRADOUROS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
+      await db.executaQuery(`delete from CI_LOGRADOUROS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
     }
     console.log('🔄 Tentando carregar CSV...');
-    const resultado = await db.preenche_SC_LOGRADOUROS();
+    const resultado = await db.preenche_CI_LOGRADOUROS();
 
     res.json({
       sucesso: true,
-      mensagem: `SC_LOGRADOUROS carregado com sucesso!`
+      mensagem: `CI_LOGRADOUROS carregado com sucesso!`
     });
 
   } catch (err) {
-    console.error("Erro ao carregar arquivo CSV:", err);
+    console.error("Erro ao preencher CI_LOGRADOUROS:", err);
     res.json({
       sucesso: false,
       erro: err.message,
-      detalhes: "Erro ao carregar SC_LOGRADOUROS"
+      detalhes: "Erro ao carregar CI_LOGRADOUROS"
     });
   }
 });

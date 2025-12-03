@@ -605,7 +605,7 @@ async function preenche_CN_FACES() {
 async function cria_CI_LOTES() {
   console.log(`Criando CI_LOTES`);
   try {
-    await executaQuery(CI.SQL_CriaCI_LOTES);
+    await executaQuery(CI.SQL_Cria_CI_LOTES);
 
     const resultado = {
       "sucesso": true,
@@ -697,24 +697,61 @@ async function normaliza_CI_LOTES(cod_municipio) {
 }
 
 
-// 🔹🔹🔹 SC_LOGRADOUROS 🔹🔹🔹
-// 🔹 Função para criar SC_LOGRADOUROS
-async function cria_SC_LOGRADOUROS() {
-  console.log(`Criando SC_LOGRADOUROS`);
+// 🔹🔹🔹 CI_LOGRADOUROS 🔹🔹🔹
+// 🔹 Função para criar CI_LOGRADOUROS
+async function cria_CI_LOGRADOUROS() {
+  console.log(`Criando CI_LOGRADOUROS`);
   try {
-    const resultado = await executaQuery(CI.SQL_CriaSC_LOGRADOUROS);
+    const resultado = await executaQuery(CI.SQL_Cria_CI_LOGRADOUROS);
     return resultado;
   } catch (error) {
     throw error;
   }
 }
 
-// 🔹 Função para preencher SC_LOGRADOUROS
-async function preenche_SC_LOGRADOUROS() {
-  console.log('Preenchendo SC_LOGRADOUROS');
+// 🔹 Função para preencher CI_LOGRADOUROS
+async function preenche_CI_LOGRADOUROS() {
+  console.log('Preenchendo CI_LOGRADOUROS');
 
   var resultado = '';
+  const query = `
+    INSERT INTO CI_LOGRADOUROS (
+        COD_MUNICIPIO, 
+        CI_NOM_LOGRADOURO_NORM,
+        CI_NOM_LOGRADOURO,
+        SC_ID_LOGRADOURO,
+        COORDS
+    )
+    SELECT DISTINCT
+        LT.COD_MUNICIPIO,
+        TRIM(UPPER(LT.NOM_LOGRADOURO)) AS CI_NOM_LOGRADOURO_NORM,
+        LT.NOM_LOGRADOURO AS CI_NOM_LOGRADOURO,
+        NULL AS SC_ID_LOGRADOURO,
+        NULL AS COORDS
+    FROM CI_LOTES LT;
+  `;
+
+  console.log('Executando carga de dados...');
+
   try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_LOGRADOUROS preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
+
+    console.log(`Carga concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CI_LOGRADOUROS:', error);
+    throw error;
+  }
+  
+/*
+try {
     const query = `
       SELECT DISTINCT 
         COD_MUNICIPIO,
@@ -727,10 +764,10 @@ async function preenche_SC_LOGRADOUROS() {
       const normalizado = util.TrocaAbreviaturas(util.NormalizaString(linha.NOM_LOGRADOURO));
 
       const query = `
-        INSERT INTO SC_LOGRADOUROS (
+        INSERT INTO CI_LOGRADOUROS (
           SC_ID_LOGRADOURO, 
           COD_MUNICIPIO,
-          SC_NOM_LOGRADOURO, 
+          CI_NOM_LOGRADOURO_NORM, 
           CI_NOM_LOGRADOURO,
           COORDS
         ) VALUES (
@@ -747,14 +784,14 @@ async function preenche_SC_LOGRADOUROS() {
     console.log('Erro em dados de CI_LOTES', resultado);
     throw error;
   }
-
+  
   // Nomes de logradouros coincidentes em CI e CN
   try {
     const query = `
-        UPDATE smuu.SC_LOGRADOUROS AS SC
+        UPDATE smuu.CI_LOGRADOUROS AS CS
           JOIN smuu.CN_LOGRADOUROS AS CN
             ON 
-              SC.SC_NOM_LOGRADOURO = CN.NOM_LOGRADOURO 
+              SC.CI_NOM_LOGRADOURO_NORM = CN.NOM_LOGRADOURO 
             AND 
               SC.COD_MUNICIPIO = CN.COD_MUNICIPIO
           SET SC.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
@@ -770,7 +807,7 @@ async function preenche_SC_LOGRADOUROS() {
   // Nomes de logradouros SOUNDEX em CI e CN
   try {
     const query = `
-      UPDATE smuu.SC_LOGRADOUROS AS SC
+      UPDATE smuu.CI_LOGRADOUROS AS SC
       JOIN smuu.CN_LOGRADOUROS AS CN
         ON 
           SOUNDEX(SC.SC_NOM_LOGRADOURO) = SOUNDEX(CN.NOM_LOGRADOURO)
@@ -787,6 +824,7 @@ async function preenche_SC_LOGRADOUROS() {
     console.log('Erro em dados de CN.SC_ID_LOGRADOURO - SOUNDEX', resultado);
     throw error;
   }
+    */
 }
 
 
@@ -811,6 +849,6 @@ module.exports = {
   cria_CI_LOTES,
   preenche_CI_LOTES,
   normaliza_CI_LOTES,
-  cria_SC_LOGRADOUROS,
-  preenche_SC_LOGRADOUROS
+  cria_CI_LOGRADOUROS,
+  preenche_CI_LOGRADOUROS
 };

@@ -550,13 +550,13 @@
       var resposta, resultado;
 
       await EnviarArquivo();
-      await CriaCI_LOTES();
-      await PreencheCI_LOTES(cod_municipio);
-      await CriaSC_LOGRADOUROS();
-      await PreencheSC_LOGRADOUROS(cod_municipio);
+      await Cria_CI_LOTES();
+      await Preenche_CI_LOTES(cod_municipio);
+      await Cria_CI_LOGRADOUROS();
+      await Preenche_CI_LOGRADOUROS(cod_municipio);
     }
 
-    async function CriaCI_LOTES() {
+    async function Cria_CI_LOTES() {
       addMensagem("Criando tabela CI_LOTES...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOTES`, {
         method: "GET"
@@ -565,7 +565,7 @@
       addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function PreencheCI_LOTES(cod_municipio) {
+    async function Preenche_CI_LOTES(cod_municipio) {
       addMensagem("Preenchendo CI_LOTES...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOTES?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
@@ -574,25 +574,25 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function CriaSC_LOGRADOUROS() {
-      addMensagem("Criando tabela SC_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_SC_LOGRADOUROS`, {
+    async function Cria_CI_LOGRADOUROS() {
+      addMensagem("Criando tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOGRADOUROS`, {
         method: "GET"
       });
       resultado = await resposta.json();
       addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function PreencheSC_LOGRADOUROS() {
-      addMensagem("Preenche tabela SC_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_SC_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+    async function Preenche_CI_LOGRADOUROS() {
+      addMensagem("Preenche tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
       resultado = await resposta.json();
       addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function NormalizaCI_LOTES(cod_municipio) {
+    async function Normaliza_CI_LOTES(cod_municipio) {
       addMensagem("Normalizando CI_LOTES...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOTES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
