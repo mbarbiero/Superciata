@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <title>Georreferenciamento: Desenho de Parcela Orientada</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { 
+            height: 80vh; 
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Desenho de Parcela Orientada (Capanema-PR)</h1>
+    <p>A função desenha um retângulo com dimensões físicas específicas (assumindo Dim1=Dim3 e Dim2=Dim4) centrado na coordenada, usando Turf.js e um ângulo de orientação de 45 graus (simulado).</p>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <script>
+        // ----------------------------------------------------
+        // 1. Definição do Mapa
+        // ----------------------------------------------------
+
+        // Coordenadas centrais (centroide da face em Capanema, PR)
+        const latCentro = -25.6600;
+        const lngCentro = -53.8050;
+
+        // Parâmetros da Parcela (Dim3 e Dim4 são ignoradas, assumindo que Dim1=Dim3 e Dim2=Dim4)
+        const larguraDaFace = 120; // Dimensão 1 (ex: frente para a rua)
+        const profundidade = 80;   // Dimensão 2 (ex: profundidade do lote)
+        const nomeDaRua = "Rua do Teste Geodésico";
+
+        // IMPORTANTE: ESTE É O ÂNGULO DE ROTAÇÃO DA RUA.
+        // Assumimos 45 graus (Nordeste) para demonstração. Você deve usar o 'bearing' real da rua.
+        const assumedBearing = 45; 
+
+        // Inicializa o mapa Leaflet
+        const map = L.map('map').setView([latCentro, lngCentro], 16);
+
+        // Adiciona o OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // ----------------------------------------------------
+        // 2. Função Principal: Desenha a Parcela Orientada
+        // ----------------------------------------------------
+
+        /**
+         * Desenha uma parcela retangular orientada a partir de sua centroide.
+         * Assume que dim1=dim3 e dim2=dim4 (formando um retângulo).
+         * @param {number} centroLat - Latitude do centroide.
+         * @param {number} centroLng - Longitude do centroide.
+         * @param {string} nomeLogradouro - Nome do logradouro (apenas para metadados).
+         * @param {number} dim1Metros - Comprimento do lado 1 (Largura).
+         * @param {number} dim2Metros - Comprimento do lado 2 (Profundidade).
+         * @param {number} [dim3Metros] - Comprimento do lado 3 (Ignorado, assume = dim1).
+         * @param {number} [dim4Metros] - Comprimento do lado 4 (Ignorado, assume = dim2).
+         */
+        function desenharParcelaOrientada(centroLat, centroLng, nomeLogradouro, dim1Metros, dim2Metros, dim3Metros, dim4Metros) {
+            
+            const larguraKm = dim1Metros / 1000;
+            const alturaKm = dim2Metros / 1000;
+            const centro = turf.point([centroLng, centroLat]);
+
+            const metadeLargura = larguraKm / 2;
+            const metadeAltura = alturaKm / 2;
+            
+            // Ângulos
+            const anguloFrente = assumedBearing; // Direção paralela à rua (Lado 1)
+            const anguloLateral = anguloFrente + 90; // Direção perpendicular à rua (Lado 2)
+            
+            // --------------------------------------------------------------------------------
+            // Cálculo dos Vértices
+            // Os vértices são calculados deslocando o ponto central (C) em duas etapas:
+            // Metade da largura (dim1) E metade da profundidade (dim2).
+            // --------------------------------------------------------------------------------
+
+            // Função auxiliar para calcular um vértice (moveX, moveY)
+            const calcularVertice = (bearing1, bearing2) => {
+                let temp = turf.rhumbDestination(centro, metadeLargura, bearing1, { units: 'kilometers' });
+                return turf.rhumbDestination(temp, metadeAltura, bearing2, { units: 'kilometers' });
+            };
+            
+            // V1: Canto Superior Esquerdo
+            const v1 = calcularVertice(anguloLateral + 180, anguloFrente + 180);
+
+            // V2: Canto Superior Direito
+            const v2 = calcularVertice(anguloLateral + 180, anguloFrente);
+            
+            // V3: Canto Inferior Direito
+            const v3 = calcularVertice(anguloLateral, anguloFrente);
+            
+            // V4: Canto Inferior Esquerdo
+            const v4 = calcularVertice(anguloLateral, anguloFrente + 180);
+
+
+            // Formata os vértices para o Leaflet: [[lat_V1, lng_V1], [lat_V2, lng_V2], ...]
+            const vertices = [v1, v2, v3, v4].map(v => [v.geometry.coordinates[1], v.geometry.coordinates[0]]);
+            
+            // Desenha o polígono no mapa (L.polygon)
+            L.polygon(vertices, {
+                color: "#ff7800",
+                weight: 3,
+                fillOpacity: 0.3
+            }).addTo(map).bindPopup(`
+                <b>Logradouro:</b> ${nomeLogradouro} <br>
+                <b>Dimensões:</b> ${dim1Metros}m x ${dim2Metros}m <br>
+                <b>Ângulo Simulado:</b> ${assumedBearing}°
+            `).openPopup();
+
+            // Adiciona um marcador no centro
+            L.marker([centroLat, centroLng]).addTo(map).bindPopup("Centroide da Face");
+            
+            // Ajusta o zoom do mapa
+            map.fitBounds(vertices, { padding: [50, 50] });
+        }
+
+        // ----------------------------------------------------
+        // 3. Execução
+        // ----------------------------------------------------
+        desenharParcelaOrientada(latCentro, lngCentro, nomeDaRua, larguraDaFace, profundidade, 0, 0); // 0, 0 são Dim3 e Dim4
+
+    </script>
+</body>
+</html>
