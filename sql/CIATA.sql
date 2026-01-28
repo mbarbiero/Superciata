@@ -184,3 +184,19 @@ CREATE TABLE `CI_ADJACENTES` (
   `DIM_FACE` decimal(6,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+    UPDATE CN_QUADRAS q
+    JOIN (
+      SELECT 
+        f.ID_QUADRA,
+        -- Constrói o array usando aspas duplas literais
+        CONCAT('["', 
+          GROUP_CONCAT(l.SC_ID_LOGRADOURO ORDER BY l.SC_ID_LOGRADOURO SEPARATOR '","'), 
+        '"]') AS SC_ID_QUADRA
+        FROM CN_FACES f
+        INNER JOIN CN_LOGRADOUROS l
+          ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
+          AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
+        GROUP BY f.ID_QUADRA
+      ) AS x 
+    ON x.ID_QUADRA = q.ID_QUADRA
+    SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;

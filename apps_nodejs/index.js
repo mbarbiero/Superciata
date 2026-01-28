@@ -1,6 +1,7 @@
 // index.js
 const express = require("express");
 const https = require("https");
+const http = require('http');
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
@@ -41,13 +42,22 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Certificados HTTPS
 const options = {
-  key: fs.readFileSync("smuu.com.br.pem"),
-  cert: fs.readFileSync("smuu.com.br.pem"),
+  key: fs.readFileSync("smuu.com.br.key"),
+  cert: fs.readFileSync("smuu.com.br.crt")
 };
 
-// Start do servidor
+// Servidor em HTTPS
+https.createServer(options, app).listen(PORT, () => {
+    console.log(`Servidor HTTPS rodando em https://localhost:${PORT}`);
+});
+/*
 https.createServer(options, app).listen(PORT, () => {
   console.log(`Servidor HTTPS rodando em https://localhost:${PORT}`);
+});
+*/
+// 🔹 Rota GET para testar conexão MySQL
+app.get("/", async (req, res) => {
+    res.json({ sucesso: true, mensagem: `Porta ${PORT} funcionando` });
 });
 
 // 🔹 Rota GET para testar conexão MySQL
@@ -234,6 +244,24 @@ app.get('/superciata/preenche_CN_FACES', async (req, res) => {
     });
   }
 });
+
+// 🔹 Rota GET para complementar CN_FACES
+app.get('/superciata/complementa_CN_FACES', async (req, res) => {
+  const { cod_municipio} = req.query;
+
+  try {
+    const resultado = await db.Complementa_CN_FACES(`SC_ID_LOGRADOURO`);
+    res.json(resultado);
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao complementar o arquivo CN_FACES"
+    });
+  }
+});
+
 
 
 // 🔹🔹🔹 CN_QUADRAS 🔹🔹🔹
@@ -597,3 +625,118 @@ app.get("/superciata/preenche_CI_LOGRADOUROS", async (req, res) => {
   }
 });
 
+
+
+// 🔹 Rota GET para carregar dados em CI_LOGRADOUROS
+app.get("/superciata/normaliza_CI_LOGRADOUROS", async (req, res) => {
+  try {
+    const { cod_municipio } = req.query;
+
+    const resultado = await db.normaliza_CI_LOGRADOUROS(cod_municipio);
+
+    res.json(resultado);
+
+  } catch (err) {
+    console.error("Erro ao normalizar CI_LOGRADOUROS:", err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao carregar CI_LOGRADOUROS"
+    });
+  }
+});
+
+// 🔹 Rota GET para atualizar dados de CI_LOGRADOUROS
+app.get("/superciata/atualiza_CI_LOGRADOUROS", async (req, res) => {
+  try {
+    const { cod_municipio } = req.query;
+
+    const resultado = await db.atualiza_CI_LOGRADOUROS(cod_municipio);
+
+    res.json(resultado);
+
+  } catch (err) {
+    console.error("Erro ao atualizar CI_LOGRADOUROS:", err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao atualizar CI_LOGRADOUROS"
+    });
+  }
+});
+
+// 🔹 Rota GET para criar a tabela CI_FACES
+app.get("/superciata/cria_CI_FACES", async (req, res) => {
+  try {
+    const resultado = await db.cria_CI_FACES();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CI_FACES OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar a tabela CI_FACES"
+    });
+  }
+});
+
+// 🔹 Rota GET para carregar dados em CI_FACES
+app.get("/superciata/preenche_CI_FACES", async (req, res) => {
+  try {
+    const { cod_municipio } = req.query;
+
+    if (db.tabelaExiste('CI_FACES')) {
+      await db.executaQuery(`delete from CI_FACES where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
+    }
+    const resultado = await db.preenche_CI_FACES();
+    res.json(resultado);
+  } catch (err) {
+    console.error("Erro ao preencher CI_FACES:", err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao carregar CI_FACES"
+    });
+  }
+});
+
+// 🔹 Rota GET para criar a tabela CI_QUADRAS
+app.get("/superciata/cria_CI_QUADRAS", async (req, res) => {
+  try {
+    const resultado = await db.cria_CI_QUADRAS();
+    res.json({
+      sucesso: true,
+      detalhes: "Tabela CI_QUADRAS OK"
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao criar a tabela CI_QUADRAS"
+    });
+  }
+});
+
+// 🔹 Rota GET para carregar dados em CI_QUADRAS
+app.get("/superciata/preenche_CI_QUADRAS", async (req, res) => {
+  try {
+    const { cod_municipio } = req.query;
+
+    if (db.tabelaExiste('CI_QUADRAS')) {
+      await db.executaQuery(`delete from CI_QUADRAS where COD_MUNICIPIO = "${cod_municipio}";`); // Exclui registros do município antes de carregar os novos registros 
+    }
+    const resultado = await db.preenche_CI_QUADRAS();
+    res.json(resultado);
+  } catch (err) {
+    console.error("Erro ao preencher CI_QUADRAS:", err);
+    res.json({
+      sucesso: false,
+      erro: err.message,
+      detalhes: "Erro ao carregar CI_QUADRAS"
+    });
+  }
+});

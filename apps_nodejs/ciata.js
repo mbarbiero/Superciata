@@ -16,8 +16,7 @@ const SQL_Cria_CI_LOGRADOUROS = `
          SC_ID_LOGRADOURO              VARCHAR(8),
          COD_MUNICIPIO                 VARCHAR(7),
          CI_NOM_LOGRADOURO_NORM        VARCHAR(250),
-         CI_NOM_LOGRADOURO             VARCHAR(250),
-         COORDS                        TEXT      
+         CI_NOM_LOGRADOURO             VARCHAR(250)
       );`;
 
 const SQL_Cria_CI_FACES = `
@@ -28,7 +27,7 @@ const SQL_Cria_CI_FACES = `
          SC_ID_LOGRADOURO              VARCHAR(8),
          CI_NOM_LOGRADOURO             VARCHAR(250),
          QTD_LOTES                     INT,
-         DIMENSAO                      FLOAT
+         DIMENSAO                      DECIMAL(6,2)
       );`;
 
 const SQL_Cria_CI_QUADRAS = `

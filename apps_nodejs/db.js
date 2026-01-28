@@ -55,12 +55,10 @@ async function tabelaExiste(nomeTabela = 'CN_PONTOS') {
 
 // Função para criar tabela CN_PONTOS
 async function cria_CN_PONTOS(tabela = 'CN_PONTOS') {
-  const dropTableCN_PONTOS = 'DROP TABLE CN_PONTOS IF EXISTS;';
-  console.log(dropTableCN_PONTOS);
+  const dropTableCN_PONTOS = 'DROP TABLE IF EXISTS CN_PONTOS;';
   try {
     await executaQuery(dropTableCN_PONTOS);
     console.log('Tabela CN_PONTOS excluída com sucesso');
-    return true;
   } catch (error) {
     console.error('Erro ao excluir tabela:', error);
     return false;
@@ -188,7 +186,6 @@ async function cria_CN_PONTOS_UNICOS() {
   console.log(`Criando CN_PONTOS_UNICOS`);
   const query = `
       CREATE TABLE IF NOT EXISTS CN_PONTOS_UNICOS (
-        id INT AUTO_INCREMENT PRIMARY KEY,
         COD_MUNICIPIO        VARCHAR(7),
         COD_UNICO_ENDERECO   VARCHAR(20),
         ID_QUADRA            VARCHAR(19),
@@ -197,8 +194,7 @@ async function cria_CN_PONTOS_UNICOS() {
         NUM_ENDERECO         VARCHAR(10),
         LATITUDE             DECIMAL(10,8),
         LONGITUDE            DECIMAL(11,8),
-        COORDS               POINT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        COORDS               POINT
       );`
   try {
     await executaQuery(query);
@@ -230,20 +226,19 @@ async function preenche_CN_PONTOS_UNICOS() {
     resultado = await executaQuery(query);
 
     query = `  
-      -- Cria base com todos os registros válidos
+      -- Cria tabela temporária com endereços válidos
       CREATE TABLE TMP_ENDERECOS_BASE AS
       SELECT 
         COD_MUNICIPIO,
         COD_UNICO_ENDERECO,
         CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
         CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
-        REPLACE(
-          CONCAT(
-            TRIM(COALESCE(NOM_TIPO_SEGLOGR,'')), ' ',
-            TRIM(COALESCE(NOM_TITULO_SEGLOGR,'')), ' ',
-            TRIM(COALESCE(NOM_SEGLOGR,''))
-          ),
-          '  ', ' '
+        TRIM(
+          CONCAT_WS(' ',
+            NULLIF(TRIM(NOM_TIPO_SEGLOGR), ''),
+            NULLIF(TRIM(NOM_TITULO_SEGLOGR), ''),
+            NULLIF(TRIM(NOM_SEGLOGR), '')
+          )
         ) AS NOM_LOGRADOURO,
         NUM_ENDERECO,
         LATITUDE,
@@ -263,30 +258,31 @@ async function preenche_CN_PONTOS_UNICOS() {
     console.log(resultado);
 
     query = `
-      -- Cria tabela agrupada com coordenadas médias e quadra/face mais frequentes
+      -- Segunda etapa: Agrupamento para eliminação de duplicidades e cálculo de centroides
+      -- MySQL 10.2
       CREATE TABLE TMP_ENDERECOS_UNICOS AS
       SELECT 
-        COD_MUNICIPIO,
-        NOM_LOGRADOURO,
-        NUM_ENDERECO,
-        -- Coordenadas médias
-        AVG(LATITUDE) AS LATITUDE_MEDIA,
-        AVG(LONGITUDE) AS LONGITUDE_MEDIA,
-        COUNT(*) AS QTD_PONTOS,
-        -- Quadra e face mais frequentes (modo estatístico)
-        SUBSTRING_INDEX(
-          GROUP_CONCAT(ID_QUADRA ORDER BY ID_QUADRA SEPARATOR ','),
-          ',',
-          1
-        ) AS ID_QUADRA_MODO,
-        SUBSTRING_INDEX(
-          GROUP_CONCAT(ID_FACE ORDER BY ID_FACE SEPARATOR ','),
-          ',',
-          1
-        ) AS ID_FACE_MODO,
-        MIN(COD_UNICO_ENDERECO) AS COD_UNICO_ENDERECO_REF
+          COD_MUNICIPIO,
+          NOM_LOGRADOURO,
+          NUM_ENDERECO,
+          AVG(LATITUDE) AS LATITUDE_MEDIA,
+          AVG(LONGITUDE) AS LONGITUDE_MEDIA,
+          COUNT(*) AS QTD_PONTOS,
+          -- Identificação da Quadra e Face predominantes (Moda Estatística)
+          SUBSTRING_INDEX(
+              GROUP_CONCAT(ID_QUADRA ORDER BY ID_QUADRA SEPARATOR ','), 
+              ',', 1
+          ) AS ID_QUADRA_MODA,
+          SUBSTRING_INDEX(
+              GROUP_CONCAT(ID_FACE ORDER BY ID_FACE SEPARATOR ','), 
+              ',', 1
+          ) AS ID_FACE_MODA,
+          MIN(COD_UNICO_ENDERECO) AS COD_UNICO_ENDERECO_REF
       FROM TMP_ENDERECOS_BASE
-      GROUP BY COD_MUNICIPIO, NOM_LOGRADOURO, NUM_ENDERECO;
+      GROUP BY 
+          COD_MUNICIPIO, 
+          NOM_LOGRADOURO, 
+          NUM_ENDERECO;
     `;
     resultado = await executaQuery(query);
     console.log(resultado);
@@ -296,31 +292,62 @@ async function preenche_CN_PONTOS_UNICOS() {
     throw error;
   }
 
+
   query = `
-      -- Insere os endereços únicos na tabela final
-      INSERT INTO CN_PONTOS_UNICOS (
+    -- Insere os endereços únicos na tabela final
+    -- MySQL 10.2
+    INSERT INTO CN_PONTOS_UNICOS (
+      COD_MUNICIPIO, 
+      COD_UNICO_ENDERECO, 
+      ID_QUADRA, 
+      ID_FACE, 
+      NOM_LOGRADOURO, 
+      NUM_ENDERECO, 
+      LATITUDE, 
+      LONGITUDE, 
+      COORDS
+    )
+    SELECT 
         COD_MUNICIPIO,
-        COD_UNICO_ENDERECO,
-        ID_QUADRA,
-        ID_FACE,
+        COD_UNICO_ENDERECO_REF,
+        ID_QUADRA_MODA,
+        ID_FACE_MODA,
         NOM_LOGRADOURO,
         NUM_ENDERECO,
-        LATITUDE,
-        LONGITUDE,
-        COORDS
-      )
-      SELECT 
-        COD_MUNICIPIO,
-        COD_UNICO_ENDERECO_REF AS COD_UNICO_ENDERECO,
-        ID_QUADRA_MODO AS ID_QUADRA,
-        ID_FACE_MODO AS ID_FACE,
-        NOM_LOGRADOURO,
-        NUM_ENDERECO,
-        LATITUDE_MEDIA AS LATITUDE,
-        LONGITUDE_MEDIA AS LONGITUDE,
-        ST_GeomFromText(CONCAT('POINT(', LONGITUDE_MEDIA, ' ', LATITUDE_MEDIA, ')'))
-      FROM TMP_ENDERECOS_UNICOS;
+        LATITUDE_MEDIA,
+        LONGITUDE_MEDIA,
+        POINT(LONGITUDE_MEDIA, LATITUDE_MEDIA)
+    FROM TMP_ENDERECOS_UNICOS;
     `;
+  /*
+    query = `
+        -- Insere os endereços únicos na tabela final
+        -- MySQL 10.2
+        INSERT INTO CN_PONTOS_UNICOS (
+          COD_MUNICIPIO,
+          COD_UNICO_ENDERECO,
+          ID_QUADRA,
+          ID_FACE,
+          NOM_LOGRADOURO,
+          NUM_ENDERECO,
+          LATITUDE,
+          LONGITUDE,
+          COORDS
+        )
+        SELECT 
+          COD_MUNICIPIO,
+          COD_UNICO_ENDERECO_REF AS COD_UNICO_ENDERECO,
+          ID_QUADRA_MODA AS ID_QUADRA,
+          ID_FACE_MODA AS ID_FACE,
+          NOM_LOGRADOURO,
+          NUM_ENDERECO,
+          LATITUDE_MEDIA AS LATITUDE,
+          LONGITUDE_MEDIA AS LONGITUDE,
+          ST_GeomFromText(CONCAT('POINT(', LONGITUDE_MEDIA, ' ', LATITUDE_MEDIA, ')'))
+        FROM TMP_ENDERECOS_UNICOS;
+      `;
+      */
+
   console.log('Executando carga de dados...');
   try {
     resultado = await executaQuery(query);
@@ -343,9 +370,9 @@ async function cria_CN_LOGRADOUROS() {
   console.log(`Criando CN_LOGRADOUROS`);
   const query = `
       CREATE TABLE IF NOT EXISTS CN_LOGRADOUROS (
-        SC_ID_LOGRADOURO     VARCHAR(8),   
         COD_MUNICIPIO        VARCHAR(7),
         NOM_LOGRADOURO       VARCHAR(250),
+        SC_ID_LOGRADOURO     VARCHAR(8), 
         COORDS               TEXT
       );`
   try {
@@ -367,15 +394,20 @@ async function preenche_CN_LOGRADOUROS(cod_municipio) {
   console.log(`Preparando preenche_CN_LOGRADOUROS`);
 
   const query = `
-    INSERT INTO CN_LOGRADOUROS (COD_MUNICIPIO, NOM_LOGRADOURO, SC_ID_LOGRADOURO, COORDS)
-      SELECT 
-          COD_MUNICIPIO,
-          NOM_LOGRADOURO,
-          LPAD(HEX(CRC32(CONCAT(COD_MUNICIPIO, NOM_LOGRADOURO))), 8, '0') AS SC_ID_LOGRADOURO,
-          ""
-      FROM CN_PONTOS_UNICOS
-      WHERE COD_MUNICIPIO = ${cod_municipio}  
-      GROUP BY COD_MUNICIPIO, NOM_LOGRADOURO;
+    INSERT INTO CN_LOGRADOUROS (
+        COD_MUNICIPIO, 
+        NOM_LOGRADOURO, 
+        SC_ID_LOGRADOURO, 
+        COORDS
+        )
+        SELECT 
+            COD_MUNICIPIO,
+            NOM_LOGRADOURO,
+            LPAD(HEX(CRC32(CONCAT(COD_MUNICIPIO, NOM_LOGRADOURO))), 8, '0') AS SC_ID_LOGRADOURO,
+            ""
+        FROM CN_PONTOS_UNICOS
+        WHERE COD_MUNICIPIO = ${cod_municipio}  
+        GROUP BY COD_MUNICIPIO, NOM_LOGRADOURO;
   `;
 
   console.log('Executando carga de dados...');
@@ -435,12 +467,12 @@ async function cria_CN_QUADRAS() {
   console.log(`Criando CN_QUADRAS`);
   const query = `
     CREATE TABLE IF NOT EXISTS CN_QUADRAS (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      ID_QUADRA            VARCHAR(19),
-      COD_MUNICIPIO VARCHAR(7),
-      SC_ID_QUADRA VARCHAR(250),
-      QTD_PONTOS INT,
-      CENTROIDE POINT
+      ID_QUADRA           VARCHAR(19),
+      COD_MUNICIPIO       VARCHAR(7),
+      SC_ID_QUADRA        VARCHAR(250),
+      ORDEM_FACES         VARCHAR(250),
+      QTD_PONTOS          INT,
+      CENTROIDE           POINT
     );`
   try {
     await executaQuery(query);
@@ -460,18 +492,51 @@ async function preenche_CN_QUADRAS() {
 
   console.log(`Preparando CN_QUADRAS`);
 
-  const query = `
-    INSERT INTO CN_QUADRAS (ID_QUADRA, COD_MUNICIPIO, SC_ID_QUADRA, QTD_PONTOS,
+  const query = `INSERT INTO CN_QUADRAS (
+        ID_QUADRA, 
+        COD_MUNICIPIO, 
+        SC_ID_QUADRA, 
+        ORDEM_FACES, 
+        QTD_PONTOS, 
         CENTROIDE)
-    SELECT
-        ID_QUADRA,
-        COD_MUNICIPIO,
-        "",
-        COUNT(*) AS QTD_PONTOS,
-        POINT(AVG(LONGITUDE), AVG(LATITUDE)) AS CENTROIDE
-    FROM CN_PONTOS_UNICOS
-    GROUP BY ID_QUADRA;
-  `;
+    SELECT 
+        f.ID_QUADRA,
+        f.COD_MUNICIPIO,
+        -- SC_ID_QUADRA
+        CONCAT('["', 
+          GROUP_CONCAT(COALESCE(f.SC_ID_LOGRADOURO, '')
+            ORDER BY f.SC_ID_LOGRADOURO 
+            SEPARATOR '","'), 
+        '"]') AS SC_ID_QUADRA,
+        -- ORDEM_FACES
+        CONCAT('["', 
+        GROUP_CONCAT(
+          COALESCE(f.SC_ID_LOGRADOURO, '') 
+          ORDER BY f.NR_ORDEM 
+          SEPARATOR '","'),
+        '"]') AS ORDEM_FACES,
+        SUM(f.QTD_PONTOS) AS QTD_PONTOS,
+            -- Calcular centroide manualmente (média das coordenadas)
+        ST_GEOMFROMTEXT(
+            CONCAT(
+              'POINT(',
+                  AVG(ST_X(f.CENTROIDE)),
+                  ' ',
+                  AVG(ST_Y(f.CENTROIDE)),
+              ')'
+            )
+        ) AS CENTROIDE
+    FROM 
+        CN_FACES f
+    WHERE 
+        f.SC_ID_LOGRADOURO IS NOT NULL
+        AND f.SC_ID_LOGRADOURO != ''
+    GROUP BY 
+        f.ID_QUADRA, 
+        f.COD_MUNICIPIO
+    ORDER BY 
+        f.COD_MUNICIPIO, 
+        f.ID_QUADRA;`;
 
   console.log('Executando carga de dados...');
 
@@ -497,26 +562,22 @@ async function complementa_CN_QUADRAS() {
   console.log(`Preenchendo SC_ID_QUADRA em CN_QUADRAS`);
 
   const query = `
-      UPDATE CN_QUADRAS q
-      JOIN (
-          SELECT 
-              f.ID_QUADRA,
-              CONCAT(
-                  '[',
-                  GROUP_CONCAT(
-                      DISTINCT CONCAT('"', l.SC_ID_LOGRADOURO, '"')
-                      ORDER BY l.SC_ID_LOGRADOURO SEPARATOR ','
-                  ),
-                  ']'
-              ) AS SC_ID_QUADRA
-          FROM CN_FACES f
-          INNER JOIN CN_LOGRADOUROS l
-              ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
-              AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
-          GROUP BY f.ID_QUADRA
-      ) AS x
-          ON x.ID_QUADRA = q.ID_QUADRA
-      SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;
+    UPDATE CN_QUADRAS q
+    JOIN (
+      SELECT 
+        f.ID_QUADRA,
+        -- Constrói o array usando aspas duplas literais
+        CONCAT('["', 
+          GROUP_CONCAT(SC_ID_LOGRADOURO ORDER BY SC_ID_LOGRADOURO SEPARATOR '","'), 
+        '"]') AS SC_ID_QUADRA
+        FROM CN_FACES f
+        INNER JOIN CN_LOGRADOUROS l
+          ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
+          AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
+        GROUP BY f.ID_QUADRA
+      ) AS x 
+    ON x.ID_QUADRA = q.ID_QUADRA
+    SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;
   `;
 
   try {
@@ -541,12 +602,14 @@ async function cria_CN_FACES() {
   console.log(`Criando CN_FACES`);
   const query = `
     CREATE TABLE IF NOT EXISTS CN_FACES (
-      ID_FACE VARCHAR(22),
-      COD_MUNICIPIO VARCHAR(7),
-      ID_QUADRA VARCHAR(19),
-      NOM_LOGRADOURO VARCHAR(250),
-      QTD_PONTOS INT,
-      CENTROIDE POINT
+      ID_FACE           VARCHAR(22),
+      COD_MUNICIPIO     VARCHAR(7),
+      ID_QUADRA         VARCHAR(19),
+      NOM_LOGRADOURO    VARCHAR(250),
+      SC_ID_LOGRADOURO  VARCHAR(8),
+      NR_ORDEM          INT,
+      QTD_PONTOS        INT,
+      CENTROIDE         POINT
     );`
   try {
     await executaQuery(query);
@@ -567,13 +630,23 @@ async function preenche_CN_FACES() {
   console.log(`Preparando CN_FACES`);
 
   const query = `
-    INSERT INTO CN_FACES (ID_FACE, COD_MUNICIPIO, ID_QUADRA,
-        NOM_LOGRADOURO, QTD_PONTOS, CENTROIDE)
+    INSERT INTO CN_FACES (
+        ID_FACE, 
+        COD_MUNICIPIO, 
+        ID_QUADRA,
+        NOM_LOGRADOURO, 
+        SC_ID_LOGRADOURO, 
+        NR_ORDEM, 
+        QTD_PONTOS, 
+        CENTROIDE
+    )
     SELECT
         ID_FACE,
         COD_MUNICIPIO,
         ID_QUADRA,
         NOM_LOGRADOURO,
+        "",
+        CAST(SUBSTRING(ID_FACE FROM LENGTH(ID_FACE) - 2) AS INTEGER),
         COUNT(*) AS QTD_PONTOS,
         POINT(AVG(LONGITUDE), AVG(LATITUDE)) AS CENTROIDE
     FROM CN_PONTOS_UNICOS
@@ -599,6 +672,40 @@ async function preenche_CN_FACES() {
     throw error;
   }
 }
+
+// Função para complementar CN_FACES
+async function Complementa_CN_FACES(atributo) {
+
+  console.log(`Complementando CN_FACES com ${atributo}`);
+
+  const query = `
+      UPDATE CN_FACES AS f
+      JOIN CN_LOGRADOUROS AS l
+          ON f.COD_MUNICIPIO = l.COD_MUNICIPIO
+              AND TRIM(UPPER(f.NOM_LOGRADOURO)) = TRIM(UPPER(l.NOM_LOGRADOURO))
+      SET f.SC_ID_LOGRADOURO = l.SC_ID_LOGRADOURO
+      WHERE f.SC_ID_LOGRADOURO IS NULL 
+          OR f.SC_ID_LOGRADOURO = '';
+  `;
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CN_FACES complementada com sucesso.",
+      "linhas complementadas": resultado.affectedRows
+    }
+
+    console.log(`Complementação concluída: ${resultado.affectedRows} linhas afetadas`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao complementar dados na tabela CN_FACES:', error);
+    throw error;
+  }
+}
+
 
 // 🔹🔹🔹 CI_LOTES 🔹🔹🔹
 // 🔹 Função para criar CI_LOTES
@@ -670,33 +777,6 @@ async function preenche_CI_LOTES(arquivoPath) {
   }
 }
 
-// 🔹 Função para normalizar CI_LOTES
-async function normaliza_CI_LOTES(cod_municipio) {
-  console.log(`Normalizando CI_LOTES`);
-  const query = `
-      UPDATE CI_LOTES
-        SET NOM_LOGRADOURO = TrocaAbreviaturas(NormalizaString(NOM_LOGRADOURO))
-      WHERE 
-        COD_MUNICIPIO = "${cod_municipio}";`;
-  try {
-    const resultado = await executaQuery(query);
-
-    const resp = {
-      "sucesso": true,
-      "mensagem": "Tabela CI_LOTES normalizada com sucesso.",
-      "linhas modificadas": resultado.affectedRows
-    }
-
-    console.log(`Normalização concluída: ${resultado.affectedRows} linhas afetadas`);
-    return resp;
-
-  } catch (error) {
-    console.error('Erro ao normalizar dados na tabela CI_LOTES:', error);
-    throw error;
-  }
-}
-
-
 // 🔹🔹🔹 CI_LOGRADOUROS 🔹🔹🔹
 // 🔹 Função para criar CI_LOGRADOUROS
 async function cria_CI_LOGRADOUROS() {
@@ -719,15 +799,13 @@ async function preenche_CI_LOGRADOUROS() {
         COD_MUNICIPIO, 
         CI_NOM_LOGRADOURO_NORM,
         CI_NOM_LOGRADOURO,
-        SC_ID_LOGRADOURO,
-        COORDS
+        SC_ID_LOGRADOURO
     )
     SELECT DISTINCT
         LT.COD_MUNICIPIO,
-        TRIM(UPPER(LT.NOM_LOGRADOURO)) AS CI_NOM_LOGRADOURO_NORM,
+        REGEXP_REPLACE(TRIM(UPPER(LT.NOM_LOGRADOURO)), '[[:space:]]{2,}', ' ') AS CI_NOM_LOGRADOURO_NORM,
         LT.NOM_LOGRADOURO AS CI_NOM_LOGRADOURO,
-        NULL AS SC_ID_LOGRADOURO,
-        NULL AS COORDS
+        NULL AS SC_ID_LOGRADOURO
     FROM CI_LOTES LT;
   `;
 
@@ -749,82 +827,357 @@ async function preenche_CI_LOGRADOUROS() {
     console.error('Erro ao preencher dados na tabela CI_LOGRADOUROS:', error);
     throw error;
   }
-  
-/*
-try {
-    const query = `
-      SELECT DISTINCT 
-        COD_MUNICIPIO,
-        NOM_LOGRADOURO
-      FROM CI_LOTES;
-    `
-    const linhas = await executaQuery(query);
+}
 
-    for (const linha of linhas) {
-      const normalizado = util.TrocaAbreviaturas(util.NormalizaString(linha.NOM_LOGRADOURO));
+// 🔹 Função para atualizar CI_LOGRADOUROS
+async function atualiza_CI_LOGRADOUROS(cod_municipio) {
+  let resp = {
+    sucesso: true,
+    municipio_codigo: cod_municipio,
+    detalhes: {}
+  };
+  let linhasAfetadasTotal = 0;
 
-      const query = `
-        INSERT INTO CI_LOGRADOUROS (
-          SC_ID_LOGRADOURO, 
-          COD_MUNICIPIO,
-          CI_NOM_LOGRADOURO_NORM, 
-          CI_NOM_LOGRADOURO,
-          COORDS
-        ) VALUES (
-          "",
-          ${linha.COD_MUNICIPIO},
-          "${normalizado}",
-          "${linha.NOM_LOGRADOURO}",
-          ""
-        );
-      `
-      resultado = await executaQuery(query);
-    }
-  } catch (error) {
-    console.log('Erro em dados de CI_LOTES', resultado);
-    throw error;
-  }
-  
+  console.log('Atualizando CI_LOGRADOUROS');
   // Nomes de logradouros coincidentes em CI e CN
   try {
     const query = `
-        UPDATE smuu.CI_LOGRADOUROS AS CS
-          JOIN smuu.CN_LOGRADOUROS AS CN
-            ON 
-              SC.CI_NOM_LOGRADOURO_NORM = CN.NOM_LOGRADOURO 
-            AND 
-              SC.COD_MUNICIPIO = CN.COD_MUNICIPIO
-          SET SC.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
-        WHERE (SC.SC_ID_LOGRADOURO = '' OR SC.SC_ID_LOGRADOURO <> CN.SC_ID_LOGRADOURO);`
-    resultado = await executaQuery(query);
-    console.log('Dados de CN.SC_ID_LOGRADOURO', resultado);
+              UPDATE smuu.CI_LOGRADOUROS AS CI
+                JOIN smuu.CN_LOGRADOUROS AS CN
+                  ON 
+                    CI.CI_NOM_LOGRADOURO_NORM = CN.NOM_LOGRADOURO 
+                  AND 
+                    CI.COD_MUNICIPIO = CN.COD_MUNICIPIO
+                SET CI.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
+              WHERE 
+                (CI.COD_MUNICIPIO = '${cod_municipio}')
+                  AND 
+                (CI.SC_ID_LOGRADOURO IS NULL);`
+    const resultado = await executaQuery(query);
+    linhasAfetadasTotal += resultado.affectedRows;
+
+    resp.detalhes.etapa_coincidentes = {
+      descricao: "Nomes de logradouros coincidentes (Exatos)",
+      linhas_afetadas: resultado.affectedRows
+    };
   } catch (error) {
-    console.log('Erro em dados de CN.SC_ID_LOGRADOURO', resultado);
+    resp.sucesso = false;
+    resp.mensagem = "Erro na execução da Etapa de Coincidência Exata.";
+    resp.erro_detalhes = {
+      etapa: "etapa_coincidentes",
+      mensagem_original: error.message || String(error)
+    };
     throw error;
   }
 
-  
   // Nomes de logradouros SOUNDEX em CI e CN
   try {
     const query = `
-      UPDATE smuu.CI_LOGRADOUROS AS SC
-      JOIN smuu.CN_LOGRADOUROS AS CN
-        ON 
-          SOUNDEX(SC.SC_NOM_LOGRADOURO) = SOUNDEX(CN.NOM_LOGRADOURO)
-        AND 
-          SC.COD_MUNICIPIO = CN.COD_MUNICIPIO
-      SET 
-        SC.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
-      WHERE 
-        (SC.SC_ID_LOGRADOURO = '' 
-        OR SC.SC_ID_LOGRADOURO <> CN.SC_ID_LOGRADOURO);`
-    resultado = await executaQuery(query);
-    console.log('Dados de CN.SC_ID_LOGRADOURO - SOUNDEX', resultado);
+              UPDATE smuu.CI_LOGRADOUROS AS CI
+              JOIN smuu.CN_LOGRADOUROS AS CN
+                ON 
+                  SOUNDEX(CI.CI_NOM_LOGRADOURO_NORM) = SOUNDEX(CN.NOM_LOGRADOURO)
+                AND 
+                  CI.COD_MUNICIPIO = CN.COD_MUNICIPIO
+              SET 
+                CI.SC_ID_LOGRADOURO = CN.SC_ID_LOGRADOURO
+              WHERE 
+                (CI.COD_MUNICIPIO = '${cod_municipio}')
+                  AND 
+                (CI.SC_ID_LOGRADOURO IS NULL);`
+    const resultado = await executaQuery(query);
+    linhasAfetadasTotal += resultado.affectedRows;
+
+    resp.detalhes.etapa_soundex = {
+      descricao: "Nomes de logradouros coincidentes por SOUNDEX",
+      linhas_afetadas: resultado.affectedRows
+    };
   } catch (error) {
-    console.log('Erro em dados de CN.SC_ID_LOGRADOURO - SOUNDEX', resultado);
+    resp.sucesso = false;
+    resp.mensagem = "Erro na execução da Etapa SOUNDEX. Verifique a sintaxe ou dados.";
+    resp.erro_detalhes = {
+      etapa: "etapa_soundex",
+      mensagem_original: error.message || String(error)
+    };
     throw error;
   }
-    */
+
+  let lev = await buscarECompararLogradouros(cod_municipio);
+
+  // Finalização
+  resp.mensagem = resp.sucesso ? "Atualização da tabela CI_LOGRADOUROS concluída com sucesso." : resp.mensagem;
+  resp.total_linhas_afetadas = linhasAfetadasTotal;
+
+  return resp;
+
+}
+
+// 🔹 Função para normalizar CI_LOGRADOUROS
+async function normaliza_CI_LOGRADOUROS(cod_municipio) {
+  console.log(`Normalizando CI_LOGRADOUROS`);
+  let linhasModificadas = 0; // Variável para acumular o total de linhas afetadas
+  let resp = {};
+
+  const selectQuery = `
+    SELECT 
+      CI_NOM_LOGRADOURO 
+    FROM CI_LOGRADOUROS
+    WHERE 
+      COD_MUNICIPIO = '${cod_municipio}';
+  `;
+  try {
+    const linhas = await executaQuery(selectQuery);
+
+    if (linhas.length === 0) {
+      console.log(`Nenhuma linha encontrada para o município ${cod_municipio}.`);
+      return { "sucesso": true, "mensagem": "Nenhuma linha para normalizar." };
+    }
+
+    for (var linha of linhas) {
+      const nomLogradouroOriginal = linha.CI_NOM_LOGRADOURO;
+      const normalizado = util.TrocaAbreviaturas(util.NormalizaString(nomLogradouroOriginal));
+
+      const updateQuery = `
+        UPDATE CI_LOGRADOUROS
+        SET CI_NOM_LOGRADOURO_NORM = '${normalizado}'
+        WHERE 
+            CI_NOM_LOGRADOURO = '${nomLogradouroOriginal}' 
+            AND COD_MUNICIPIO = '${cod_municipio}';
+      `;
+      const resultadoUpdate = await executaQuery(updateQuery);
+      linhasModificadas += resultadoUpdate.changedRows;
+    }
+
+    resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_LOGRADOUROS normalizada com sucesso.",
+      "linhas modificadas": linhasModificadas
+    }
+    return resp;
+  } catch (error) {
+    console.log('Erro ao normalizar CI_LOGRADOUROS', error);
+    throw error;
+  }
+}
+
+/**
+* Busca e compara logradouros de CI (apenas os já identificados) com CN, usando Levenshtein.
+* * @param {string} cod_municipio - Código do município para filtrar as buscas.
+* @returns {Array<Object>} Array com o CI_NOM, CN_NOM e a Distância Levenshtein.
+*/
+async function buscarECompararLogradouros(cod_municipio) {
+  console.log(`Buscando logradouros identificados (${cod_municipio}) para comparação Levenshtein...`);
+
+  // 1. Busca dos dados CI (COM FILTRO)
+  const query_CI = `
+        SELECT CI_NOM_LOGRADOURO_NORM
+        FROM smuu.CI_LOGRADOUROS
+        WHERE 
+            COD_MUNICIPIO = '${cod_municipio}' AND
+            SC_ID_LOGRADOURO IS NULL; -- AQUI ESTÁ O SEU FILTRO
+    `;
+
+  // 2. Busca dos dados CN (TODOS)
+  const query_CN = `
+        SELECT NOM_LOGRADOURO
+        FROM smuu.CN_LOGRADOUROS
+        WHERE 
+            COD_MUNICIPIO = '${cod_municipio}';
+    `;
+
+  let ciLogradouros;
+  let cnLogradouros;
+
+  try {
+    // Assume que executaQuery retorna um array de objetos [{ campo: valor }]
+    ciLogradouros = await executaQuery(query_CI);
+    cnLogradouros = await executaQuery(query_CN);
+
+  } catch (error) {
+    console.error('Erro ao buscar dados do MariaDB:', error);
+    throw new Error('Falha ao acessar o banco de dados para comparação.');
+  }
+
+  if (ciLogradouros.length === 0 || cnLogradouros.length === 0) {
+    console.log('Uma das bases de dados está vazia após o filtro. Nenhuma comparação realizada.');
+    return [];
+  }
+
+  console.log(`Bases carregadas. CI: ${ciLogradouros.length} / CN: ${cnLogradouros.length}. Iniciando comparação N*M.`);
+
+  const resultados = [];
+
+  // 3. Comparação N*M (Produto Cartesiano)
+  for (const itemCI of ciLogradouros) {
+    const nomeCI = itemCI.CI_NOM_LOGRADOURO_NORM;
+
+    for (const itemCN of cnLogradouros) {
+      const nomeCN = itemCN.NOM_LOGRADOURO;
+
+      // 4. Cálculo da Distância Levenshtein
+      const distancia = util.LevenshteinDistance(nomeCI, nomeCN);
+
+      resultados.push({
+        CI_NOM_LOGRADOURO_NORM: nomeCI,
+        NOM_LOGRADOURO: nomeCN,
+        DISTANCIA_LEVENSHTEIN: distancia
+      });
+    }
+  }
+
+  // 5. Classifica os resultados (melhores matches primeiro)
+  resultados.sort((a, b) => a.DISTANCIA_LEVENSHTEIN - b.DISTANCIA_LEVENSHTEIN);
+
+  console.log('Comparação concluída.');
+  //console.log(resultados);
+  return (resultados);
+}
+
+// 🔹🔹🔹 CI_FACES 🔹🔹🔹
+// Função para criar CI_FACES()
+async function cria_CI_FACES() {
+  console.log(`Criando CI_FACES`);
+  const query = `
+    CREATE TABLE IF NOT EXISTS CI_FACES (
+      ID_FACE           VARCHAR(65),
+      COD_MUNICIPIO     VARCHAR(7),
+      ID_QUADRA         VARCHAR(50),
+      SC_ID_LOGRADOURO  VARCHAR(8),
+      QTD_LOTES         INT(11),
+      DIM_FACE          DECIMAL(6,2)                                                                                                   
+    );`
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_FACES criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// 🔹 Função para preencher CI_FACES
+async function preenche_CI_FACES() {
+  console.log('Preenchendo CI_FACES');
+
+  var resultado = '';
+  const query = `
+      INSERT INTO CI_FACES (
+          ID_FACE, 
+          COD_MUNICIPIO, 
+          ID_QUADRA, 
+          SC_ID_LOGRADOURO, 
+          QTD_LOTES, 
+          DIM_FACE
+      )
+      SELECT 
+          CONCAT(LT.COD_MUNICIPIO, LT.NUM_QUADRA, LG.SC_ID_LOGRADOURO) AS ID_FACE,
+          LT.COD_MUNICIPIO, 
+          LT.NUM_QUADRA AS ID_QUADRA, 
+          LG.SC_ID_LOGRADOURO,
+          COUNT(*) AS QTD_LOTES,
+          SUM(LT.DIM_TESTADA) AS DIM_FACE
+      FROM CI_LOTES LT
+      JOIN CI_LOGRADOUROS LG 
+          ON (LT.NOM_LOGRADOURO = LG.CI_NOM_LOGRADOURO)
+          AND (LT.COD_MUNICIPIO = LG.COD_MUNICIPIO)
+      GROUP BY 
+          LT.COD_MUNICIPIO, 
+          LT.NUM_QUADRA, 
+          LG.SC_ID_LOGRADOURO;
+  `;
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_FACES preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
+    console.log(`Carga concluída: ${resultado.affectedRows}`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CI_FACES:', error);
+    throw error;
+  }
+}
+
+// 🔹🔹🔹 CI_QUADRAS 🔹🔹🔹
+// Função para criar CI_QUADRAS()
+async function cria_CI_QUADRAS() {
+  console.log(`Criando CI_QUADRAS`);
+  const query = `
+    CREATE TABLE IF NOT EXISTS CI_QUADRAS (
+      ID_QUADRA         VARCHAR(50),
+      COD_MUNICIPIO 	  VARCHAR(7),
+      SC_ID_QUADRA 		  VARCHAR(250),
+      QTD_PONTOS 		    INT,
+      AREA 				      DECIMAL(10,2)
+    );
+    `;
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_QUADRAS criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// 🔹 Função para preencher CI_QUADRAS
+async function preenche_CI_QUADRAS() {
+  console.log('Preenchendo CI_QUADRAS');
+
+  var resultado = '';
+  const query = `
+      INSERT INTO CI_QUADRAS (
+          ID_QUADRA, 
+          COD_MUNICIPIO, 
+          SC_ID_QUADRA, 
+          QTD_PONTOS, 
+          AREA
+      )
+      SELECT 
+          ID_QUADRA,
+          COD_MUNICIPIO,
+          -- Constrói o array usando aspas duplas literais
+          CONCAT('["', 
+              GROUP_CONCAT(SC_ID_LOGRADOURO ORDER BY SC_ID_LOGRADOURO SEPARATOR '","'), 
+          '"]') AS SC_ID_QUADRA,
+          SUM(QTD_LOTES) AS QTD_PONTOS,
+          0.00 AS AREA
+      FROM CI_FACES
+      GROUP BY 
+          COD_MUNICIPIO, 
+          ID_QUADRA;  
+      `;
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_QUADRAS preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
+    console.log(`Carga concluída: ${resultado.affectedRows}`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CI_QUADRAS:', error);
+    throw error;
+  }
 }
 
 
@@ -841,14 +1194,23 @@ module.exports = {
   preenche_CN_PONTOS_UNICOS,
   cria_CN_LOGRADOUROS,
   preenche_CN_LOGRADOUROS,
-  cria_CN_QUADRAS,
-  preenche_CN_QUADRAS,
-  complementa_CN_QUADRAS, 
   cria_CN_FACES,
   preenche_CN_FACES,
+  Complementa_CN_FACES,
+  cria_CN_QUADRAS,
+  preenche_CN_QUADRAS,
+  complementa_CN_QUADRAS,
   cria_CI_LOTES,
   preenche_CI_LOTES,
-  normaliza_CI_LOTES,
   cria_CI_LOGRADOUROS,
-  preenche_CI_LOGRADOUROS
+  preenche_CI_LOGRADOUROS,
+  normaliza_CI_LOGRADOUROS,
+  atualiza_CI_LOGRADOUROS,
+  cria_CI_FACES,
+  preenche_CI_FACES,
+  cria_CI_QUADRAS,
+  preenche_CI_QUADRAS
 };
+
+
+
