@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SuperCIATA — Georreferenciamento de Cadastro Urbano Fit-for-purpose</title>
+  <meta name="description"
+    content="A metodologia Fit-for-Purpose oferece a base para integrar o georreferenciamento de baixo custo no Cadastro Urbano, viabilizando a rápida implementação e manutenção do CTM." />
+  <style>
+    :root {
+      --bg: #fff;
+      --muted: #444;
+      --brand: #004aad;
+      --brand-2: #00b4d8;
+      --text: #111;
+      --ring: rgba(0, 74, 173, .35);
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+    }
+
+    header .logo img {
+      height: 48px;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: #0073e6;
+    }
+
+    .hero {
+      background: linear-gradient(180deg, #eef6ff, #fff);
+      padding: 50px 20px 20px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 4.5vw, 56px);
+      line-height: 1.1;
+      color: var(--brand);
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 17px;
+      margin-bottom: 20px;
+    }
+
+    .municipio-box {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fafafa;
+      max-width: 480px;
+      margin: 0 auto 40px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .municipio-box h3 {
+      color: var(--brand);
+      margin-bottom: 10px;
+    }
+
+    .municipio-box span {
+      display: inline-block;
+      margin: 6px 0;
+      color: var(--brand);
+      font-weight: 600;
+    }
+
+    .municipio-box button {
+      background: #0073e6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .municipio-box button:hover {
+      background: #004aad;
+    }
+
+    .section {
+      padding: 60px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section h2 {
+      text-align: center;
+      font-size: 32px;
+      margin-bottom: 10px;
+      color: var(--brand);
+    }
+
+    .section p.lead {
+      text-align: center;
+      color: #555;
+      margin-bottom: 50px;
+      font-size: 17px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    @media(min-width:800px) {
+      .cards {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .card {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .card .content {
+      padding: 22px;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      color: var(--brand);
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 40px 30px;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+    </div>
+    <nav>
+      <a href="#etapas">Etapas</a>
+      <a href="#cases">Cases</a>
+      <a href="#contato">Contato</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>SuperCIATA — Geointeligência Urbana</h1>
+    <p>Integração de endereços, quadras e lotes urbanos com dados abertos e livres.</p>
+
+    <div class="municipio-box">
+      <h3>Escolher Município</h3>
+      <p><b>Município selecionado:</b></p>
+      <span id="municipioAtual">Nenhum município selecionado</span><br>
+      <button id="btnEscolherMunicipio">Selecionar Município</button>
+    </div>
+  </section>
+
+  <section class="section" id="etapas">
+    <h2>Etapas</h2>
+    <p class="lead">Aplicações que oferecem visão completa sobre o território urbano.</p>
+    <div class="cards">
+      <div class="card">
+        <a href="carrega_dados.html">
+          <img src="imagens/Carga_de_Bases_de_Dados.jpg" alt="">
+          <div class="content">
+            <h3>Carga de Bases de Dados</h3>
+            <p>Carregar arquivos do CNEFE e do Cadastro Municipal.</p>
+          </div>
+        </a>
+      </div>
+      <div class="card">
+        <a href="visualiza_mapas.html">
+          <img src="imagens/Visualizacao_Pontos.jpg" alt="">
+          <div class="content">
+            <h3>Visualização de Mapas</h3>
+            <p>Visualizar os resultados do processamento.</p>
+          </div>
+        </a>
+      </div>
+      <div class="card">
+        <a href="documentos.html">
+          <img src="imagens/Acesso_Documentos.jpg" alt="">
+          <div class="content">
+            <h3>Documentos e Códigos</h3>
+            <p>Documentos, scripts e publicações técnicas.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    © <span id="year"></span> SuperCIATA — Geoespacialização Urbana
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Atualiza nome do município selecionado
+    function atualizarMunicipioAtual() {
+      const nome = localStorage.getItem('nome_municipio');
+      const uf = localStorage.getItem('uf_municipio');
+      const span = document.getElementById('municipioAtual');
+      span.textContent = nome && uf ? `${nome} (${uf})` : "Nenhum município selecionado";
+    }
+
+    // Botão escolher município
+    document.getElementById('btnEscolherMunicipio').addEventListener('click', () => {
+      const popup = window.open(
+        "escolher_municipio.html",
+        "popupMunicipio",
+        "width=420,height=480,resizable=no,scrollbars=no"
+      );
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          atualizarMunicipioAtual();
+        }
+      }, 500);
+    });
+
+    document.addEventListener("DOMContentLoaded", atualizarMunicipioAtual);
+  </script>
+</body>
+
+</html>

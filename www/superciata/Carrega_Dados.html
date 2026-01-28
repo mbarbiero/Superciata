@@ -445,7 +445,7 @@
       await CriaCN_QUADRAS();
       await PreencheCN_QUADRAS(cod_municipio);
       // IMPORTANTE - ComplementaCN_QUADRAS deve vir depois de PreencheCN_FACES
-     // await ComplementaCN_QUADRAS(cod_municipio);
+      // await ComplementaCN_QUADRAS(cod_municipio);
     }
 
     async function CriaCN_PONTOS() {
@@ -569,6 +569,9 @@
       await Normaliza_CI_LOGRADOUROS(cod_municipio);
       await Atualiza_CI_LOGRADOUROS(cod_municipio);
       await Cria_CI_FACES(cod_municipio);
+      await Preenche_CI_FACES(cod_municipio);
+      await Cria_CI_QUADRAS(cod_municipio);
+      await Preenche_CI_QUADRAS(cod_municipio);
     }
 
     async function Cria_CI_LOTES() {
@@ -632,6 +635,33 @@
       });
       resultado = await resposta.json();
       addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Preenche_CI_FACES() {
+      addMensagem("Preenche tabela CI_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Cria_CI_QUADRAS() {
+      addMensagem("Criando tabela CI_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_QUADRAS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Preenche_CI_QUADRAS() {
+      addMensagem("Preenche tabela CI_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
     const MAX_FILE_SIZE = 300 * 1024; // 300 kB

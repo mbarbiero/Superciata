@@ -1,0 +1,14 @@
+const http = require('http');
+const PORT = 21069;
+
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('Hello World - Porta 21069 funcionando corretamente!\n');
+});
+
+// Usamos 0.0.0.0 para aceitar conexões de fora do servidor
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor de teste rodando em http://localhost:${PORT}/`);
+  console.log('Pressione Ctrl+C para encerrar.');
+});
