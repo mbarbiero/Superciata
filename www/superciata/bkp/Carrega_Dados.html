@@ -236,49 +236,104 @@
 
 <body>
 
-  <header>
-    <div class="logo">
-      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+  <header
+    style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:10px 40px; border-bottom:1px solid #eee; background:#fff;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="logo">
+        <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana" style="height:52px;">
+      </div>
     </div>
-    <nav>
-      <a href="index.html">Início</a>
-      <a href="javascript:history.back()">Voltar</a>
+    <h1 style="font-size:1.5rem; color:#004aad; margin:0;">Carga de Arquivos – CNEFE e CIATA</h1>
+    <nav style="display:flex; gap:20px; margin-top:6px;">
+      <a href="index.html" style="color:#222; text-decoration:none; font-weight:500;">Início</a>
+      <a href="javascript:history.back()" style="color:#222; text-decoration:none; font-weight:500;">Voltar</a>
     </nav>
   </header>
 
+
   <main class="upload-container">
-    <h1 style="text-align:center; margin-bottom:25px;">Carga de Arquivos - CNEFE e CIATA</h1>
 
-    <div style="text-align:center; margin-bottom:25px;">
-      <label><b>Município selecionado:</b></label><br>
-      <span id="municipioAtual" style="display:inline-block; margin:8px 0; color:#004aad; font-weight:500;">
-        Nenhum município selecionado
-      </span><br>
-      <button id="btnEscolherMunicipio"
-        style="background:#0073e6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
-        Escolher Município
-      </button>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between;">
+      <!-- 1. Escolher Município -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Escolher Município</h3>
+        <label><b>Município selecionado:</b></label><br>
+        <span id="municipioAtual" style="display:inline-block; margin:8px 0; color:#004aad; font-weight:500;">
+          Nenhum município selecionado
+        </span><br>
+        <button id="btnEscolherMunicipio"
+          style="background:#0073e6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
+          Escolher Município
+        </button>
+      </div>
+
+      <!-- 2. Carregar Arquivo -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Carregar Arquivo</h3>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📁</div>
+          <p><strong>Clique aqui ou arraste um arquivo ZIP</strong></p>
+          <p style="font-size:14px; color:#666;">Arquivos suportados: <b>CNEFE</b> ou <b>CIATA</b></p>
+          <div class="file-name" id="fileName"></div>
+          <input type="file" id="arquivoZip" accept=".zip" />
+        </div>
+        <p style="font-size:13px; margin-top:8px;">
+          Se não tiver o arquivo CNEFE, pode baixá-lo
+          <a href="https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/CSV/Municipio/"
+            target="_blank" style="color:#0073e6; text-decoration:none; font-weight:500;">aqui</a>.
+        </p>
+        <div class="botoes">
+          <button id="btnCNEFE">Processar CNEFE</button>
+          <button id="btnCIATA">Processar CIATA</button>
+        </div>
+      </div>
+
+      <!-- 3. Relatório -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Relatório</h3>
+        <div id="relatorio"></div>
+        <div class="relatorio-footer">
+          <button id="btnLimpar" class="btn-limpar">Limpar Relatório</button>
+        </div>
+      </div>
     </div>
 
-    <div class="upload-area" id="uploadArea">
-      <div class="upload-icon">📁</div>
-      <p><strong>Clique aqui ou arraste um arquivo ZIP</strong></p>
-      <p style="font-size:14px; color:#666;">Arquivos suportados: <b>CNEFE</b> ou <b>Cadastro Municipal (CIATA)</b></p>
-      <div class="file-name" id="fileName"></div>
-      <input type="file" id="arquivoZip" accept=".zip" />
-    </div>
-
-    <div class="botoes">
-      <button id="btnCNEFE">Processar CNEFE</button>
-      <button id="btnCIATA">Processar CIATA</button>
-    </div>
-
-    <h3 style="margin: 15px 0 8px 0; color: #444; font-size: 16px;">Relatório de Execução</h3>
-    <div id="relatorio"></div>
-    <div class="relatorio-footer">
-      <button id="btnLimpar" class="btn-limpar">Limpar Relatório</button>
+    <!-- 🔹 Modal de aviso -->
+    <div id="modalAviso" style="
+      display:none;
+      position:fixed;
+      top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5);
+      z-index:2000;
+      justify-content:center;
+      align-items:center;">
+      <div style="
+        background:#fff;
+        border-radius:10px;
+        padding:24px 30px;
+        max-width:360px;
+        text-align:center;
+        box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <p id="textoAviso" style="color:#b71c1c; font-weight:500; margin-bottom:18px; line-height:1.4;">
+          No momento não é possível processar arquivos maiores do que 256 kB.
+        </p>
+        <button id="btnFecharAviso" style="
+          background:#0073e6;
+          color:#fff;
+          border:none;
+          border-radius:6px;
+          padding:8px 18px;
+          font-size:14px;
+          cursor:pointer;">
+          OK
+        </button>
+      </div>
     </div>
   </main>
+
 
   <footer>
     © <span id="year"></span> Superciata — Geoespacialização Urbana
@@ -294,7 +349,7 @@
     const btnCNEFE = document.getElementById("btnCNEFE");
     const btnCIATA = document.getElementById("btnCIATA");
 
-    let cod_municipio = '';
+    atualizarMunicipioAtual();
     let nmArquivoCSV = '';
 
     function atualizarEstadoBotoes() {
@@ -304,7 +359,7 @@
     }
 
     function addMensagem(msg, tipo = "info") {
-      const linha = document.createElement("div"); 
+      const linha = document.createElement("div");
       linha.className = `msg ${tipo}`;
       linha.textContent = msg;
       relatorio.appendChild(linha);
@@ -312,6 +367,7 @@
     }
 
     async function EnviarArquivo() {
+      console.log('inputArquivo.files', inputArquivo.files);
       const arquivo = inputArquivo.files[0];
       if (!arquivo) {
         addMensagem("⚠️ Escolha ou arraste um arquivo ZIP primeiro.", "erro");
@@ -387,6 +443,8 @@
       await PreencheCN_QUADRAS(cod_municipio);
       await CriaCN_FACES();
       await PreencheCN_FACES(cod_municipio);
+      // IMPORTANTE - ComplementaCN_QUADRAS deve vir depois de PreencheCN_FACES
+      await ComplementaCN_QUADRAS(cod_municipio);
     }
 
     async function CriaCN_PONTOS() {
@@ -425,24 +483,6 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function CriaCN_LOGRADOUROS() {
-      addMensagem("Criando tabela CN_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_LOGRADOUROS`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
-    }
-
-    async function PreencheCN_LOGRADOUROS(cod_municipio) {
-      addMensagem("Preenchendo CN_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
-    }
-
     async function CriaCN_QUADRAS() {
       addMensagem("Criando tabela CN_QUADRAS...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
@@ -455,6 +495,15 @@
     async function PreencheCN_QUADRAS(cod_municipio) {
       addMensagem("Preenchendo CN_QUADRAS...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function ComplementaCN_QUADRAS(cod_municipio) {
+      addMensagem("Preenchendo SC_ID_QUADRA em CN_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/complementa_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
       });
       resultado = await resposta.json();
@@ -479,15 +528,38 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
+    async function CriaCN_LOGRADOUROS() {
+      addMensagem("Criando tabela CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_LOGRADOUROS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_LOGRADOUROS(cod_municipio) {
+      addMensagem("Preenchendo CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
     async function ProcessaCIATA() {
       var resposta, resultado;
 
       await EnviarArquivo();
-      await CriaCI_LOTES();
-      await PreencheCI_LOTES(cod_municipio);
+      await Cria_CI_LOTES();
+      await Preenche_CI_LOTES(cod_municipio);
+      await Cria_CI_LOGRADOUROS();
+      await Preenche_CI_LOGRADOUROS(cod_municipio);
+      await Normaliza_CI_LOGRADOUROS(cod_municipio);
+      await Atualiza_CI_LOGRADOUROS(cod_municipio);
+      await Cria_CI_FACES(cod_municipio);
     }
 
-    async function CriaCI_LOTES() {
+    async function Cria_CI_LOTES() {
       addMensagem("Criando tabela CI_LOTES...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOTES`, {
         method: "GET"
@@ -496,7 +568,7 @@
       addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function PreencheCI_LOTES(cod_municipio) {
+    async function Preenche_CI_LOTES(cod_municipio) {
       addMensagem("Preenchendo CI_LOTES...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOTES?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
         method: "GET"
@@ -505,8 +577,91 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
+    async function Cria_CI_LOGRADOUROS() {
+      addMensagem("Criando tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOGRADOUROS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
 
-    // ==== DRAG & DROP ====
+    async function Preenche_CI_LOGRADOUROS() {
+      addMensagem("Preenche tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Normaliza_CI_LOGRADOUROS(cod_municipio) {
+      addMensagem("Normalizando CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Atualiza_CI_LOGRADOUROS(cod_municipio) {
+      addMensagem("Atualizando CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/atualiza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Cria_CI_FACES() {
+      addMensagem("Criando tabela CI_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_FACES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    const MAX_FILE_SIZE = 300 * 1024; // 300 kB
+    const modalAviso = document.getElementById("modalAviso");
+    const textoAviso = document.getElementById("textoAviso");
+    const btnFecharAviso = document.getElementById("btnFecharAviso");
+
+    // Fecha o modal
+    btnFecharAviso.onclick = () => {
+      modalAviso.style.display = "none";
+    };
+
+    function mostrarAviso(mensagem) {
+      textoAviso.textContent = mensagem;
+      modalAviso.style.display = "flex";
+    }
+
+    function validarArquivo(arquivo) {
+      if (!arquivo.name.toLowerCase().endsWith(".zip")) {
+        addMensagem("⚠️ Apenas arquivos ZIP são aceitos.", "erro");
+        inputArquivo.value = "";
+        fileName.textContent = "";
+        atualizarEstadoBotoes();
+        return false;
+      }
+
+      if (arquivo.size > MAX_FILE_SIZE) {
+        const tamanhoKB = (arquivo.size / 1024).toFixed(1);
+        const mensagem = `O arquivo "${arquivo.name}" tem ${tamanhoKB} KB. No momento não é possível processar arquivos maiores do que 300 kB.`;
+        addMensagem(`❌ ${mensagem}`, "erro");
+
+        // Mostra o aviso visual e cancela o upload
+        mostrarAviso("No momento não é possível processar arquivos maiores do que 300 kB.");
+        inputArquivo.value = "";
+        fileName.textContent = "";
+        atualizarEstadoBotoes();
+        return false;
+      }
+
+      return true;
+    }
+
     uploadArea.addEventListener("click", () => inputArquivo.click());
 
     uploadArea.addEventListener("dragover", (e) => {
@@ -518,27 +673,31 @@
       uploadArea.classList.remove("dragover");
     });
 
+    // --- DRAG & DROP ---
     uploadArea.addEventListener("drop", (e) => {
       e.preventDefault();
       uploadArea.classList.remove("dragover");
 
       const arquivo = e.dataTransfer.files[0];
-      if (arquivo && arquivo.name.endsWith(".zip")) {
+      if (arquivo && validarArquivo(arquivo)) {
         inputArquivo.files = e.dataTransfer.files;
         fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
         addMensagem(`📦 Arquivo recebido: ${arquivo.name}`, "ok");
         atualizarEstadoBotoes();
-      } else {
-        addMensagem("⚠️ Apenas arquivos ZIP são aceitos.", "erro");
       }
     });
 
-    // Atualizar quando um arquivo for selecionado via input
+    // --- SELEÇÃO MANUAL ---
     inputArquivo.addEventListener("change", () => {
       if (inputArquivo.files.length > 0) {
         const arquivo = inputArquivo.files[0];
-        fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
-        addMensagem(`📦 Arquivo selecionado: ${arquivo.name}`, "ok");
+        if (validarArquivo(arquivo)) {
+          fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
+          addMensagem(`📦 Arquivo selecionado: ${arquivo.name}`, "ok");
+        } else {
+          inputArquivo.value = "";
+          fileName.textContent = "";
+        }
       } else {
         fileName.textContent = "";
       }

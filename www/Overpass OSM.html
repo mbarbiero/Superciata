@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>OSM Nodes com Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; width: 100%; border-radius: 8px; }
+        body { font-family: sans-serif; margin: 20px; }
+        .info { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+
+    <h2>Mapa de Nós: Avenida Ubirajaras</h2>
+    <div class="info" id="info">Consultando dados...</div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Coordenadas fornecidas
+        const lat = -25.6805;
+        const lng = -53.8024;
+
+        // Inicializa o mapa Leaflet
+        const map = L.map('map').setView([lat, lng], 17);
+
+        // Adiciona a camada base do OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marcador do ponto central da busca
+        L.marker([lat, lng]).addTo(map).bindPopup("<b>Centro da Busca</b>").openPopup();
+
+        // Query Overpass
+        const query = `[out:json][timeout:25];
+            way["highway"]["name"="Avenida Ubirajaras"](around:30, ${lat}, ${lng});
+            out body; >; out skel qt;`;
+
+        async function carregarDados() {
+            try {
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: query
+                });
+                const data = await response.json();
+
+                // Dicionário para mapear ID do Node para suas coordenadas
+                const nodesMap = {};
+                data.elements.forEach(el => {
+                    if (el.type === 'node') {
+                        nodesMap[el.id] = [el.lat, el.lon];
+                        
+                        // Desenha um pequeno círculo para cada nó individual
+                        L.circleMarker([el.lat, el.lon], {
+                            radius: 4,
+                            color: 'red',
+                            fillColor: '#f03',
+                            fillOpacity: 0.5
+                        }).addTo(map).bindPopup(`Node ID: ${el.id}`);
+                    }
+                });
+
+                // Desenha as linhas (ways) conectando os nós
+                data.elements.forEach(el => {
+                    if (el.type === 'way' && el.nodes) {
+                        const coordinates = el.nodes.map(nodeId => nodesMap[nodeId]);
+                        
+                        // Linha azul representando o logradouro
+                        L.polyline(coordinates, {color: 'blue', weight: 5}).addTo(map);
+                        
+                        // Identifica extremos para seu cálculo de azimute
+                        const pInicial = coordinates[0];
+                        const pFinal = coordinates[coordinates.length - 1];
+
+                        document.getElementById('info').innerHTML = `
+                            <b>Via encontrada:</b> ${el.tags.name || 'Sem nome'}<br>
+                            <b>Total de nós:</b> ${el.nodes.length}<br>
+                            <b>Extremos para Azimute:</b> [${pInicial}] até [${pFinal}]
+                        `;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro ao buscar dados:", error);
+                document.getElementById('info').innerText = "Erro ao carregar dados do OSM.";
+            }
+        }
+
+        carregarDados();
+    </script>
+</body>
+</html>

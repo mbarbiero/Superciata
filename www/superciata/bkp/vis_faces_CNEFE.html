@@ -45,9 +45,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // Alterado para centralizar em -25.6807, -53.8018 com zoom 18
-    const mapa = L.map('mapa').setView([-25.6807, -53.8018], 10);
-    
+    const mapa = L.map('mapa').setView([-15.78, -47.93], 5);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
     const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
     L.control.layers({ "Mapa de Ruas": osm, "Imagem de Satélite": satelite }).addTo(mapa);
@@ -73,7 +71,9 @@
         const resp = await fetch(url);
         const dados = await resp.json();
 
+        // 🔹 Verifica se veio um array e se está vazio
         if (!Array.isArray(dados) || dados.length === 0) {
+          //console.warn("⚠️ Nenhum ponto encontrado para o município:", cod_municipio);
           alert(`Nenhuma face CNEFE foi encontrada para o município ${cod_municipio}.\nVerifique se foi feita a carga de dados.`);
           return;
         }
@@ -95,12 +95,9 @@
           markers.push(marker);
         });
 
-        // Comentado para manter a centralização manual que você solicitou
-        /*
         if (markers.length > 0) {
           mapa.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
         }
-        */
       } catch (e) {
         console.error("Erro ao carregar faces:", e);
       }

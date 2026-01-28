@@ -439,12 +439,13 @@
       await PreencheCN_PONTOS_UNICOS(cod_municipio);
       await CriaCN_LOGRADOUROS();
       await PreencheCN_LOGRADOUROS(cod_municipio);
-      await CriaCN_QUADRAS();
-      await PreencheCN_QUADRAS(cod_municipio);
       await CriaCN_FACES();
       await PreencheCN_FACES(cod_municipio);
+      await ComplementaCN_FACES(cod_municipio);
+      await CriaCN_QUADRAS();
+      await PreencheCN_QUADRAS(cod_municipio);
       // IMPORTANTE - ComplementaCN_QUADRAS deve vir depois de PreencheCN_FACES
-      await ComplementaCN_QUADRAS(cod_municipio);
+     // await ComplementaCN_QUADRAS(cod_municipio);
     }
 
     async function CriaCN_PONTOS() {
@@ -483,6 +484,51 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
+    async function CriaCN_LOGRADOUROS() {
+      addMensagem("Criando tabela CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_LOGRADOUROS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_LOGRADOUROS(cod_municipio) {
+      addMensagem("Preenchendo CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function CriaCN_FACES() {
+      addMensagem("Criando tabela CN_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_FACES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_FACES(cod_municipio) {
+      addMensagem("Preenchendo CN_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function ComplementaCN_FACES(cod_municipio) {
+      addMensagem("Complementando CN_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/complementa_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
     async function CriaCN_QUADRAS() {
       addMensagem("Criando tabela CN_QUADRAS...");
       resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
@@ -510,41 +556,7 @@
       addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
     }
 
-    async function CriaCN_FACES() {
-      addMensagem("Criando tabela CN_FACES...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_FACES`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
-    }
 
-    async function PreencheCN_FACES(cod_municipio) {
-      addMensagem("Preenchendo CN_FACES...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
-    }
-
-    async function CriaCN_LOGRADOUROS() {
-      addMensagem("Criando tabela CN_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_LOGRADOUROS`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
-    }
-
-    async function PreencheCN_LOGRADOUROS(cod_municipio) {
-      addMensagem("Preenchendo CN_LOGRADOUROS...");
-      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
-        method: "GET"
-      });
-      resultado = await resposta.json();
-      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
-    }
 
     async function ProcessaCIATA() {
       var resposta, resultado;

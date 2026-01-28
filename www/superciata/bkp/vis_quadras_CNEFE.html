@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centroides das Faces</title>
+  <title>Centroides das Quadras</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <style>
     html,
@@ -26,7 +26,7 @@
       margin: 0;
       font-size: 1.2em;
       color: #004aad;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: arial bold, Helvetica, sans-serif;
       font-weight: bold;
     }
 
@@ -39,15 +39,13 @@
 
 <body>
   <header>
-    <h1>Centroides das Faces</h1>
+    <h1>Centroides das Quadras</h1>
   </header>
   <div id="mapa"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // Alterado para centralizar em -25.6807, -53.8018 com zoom 18
-    const mapa = L.map('mapa').setView([-25.6807, -53.8018], 10);
-    
+    const mapa = L.map('mapa').setView([-15.78, -47.93], 5);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
     const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
     L.control.layers({ "Mapa de Ruas": osm, "Imagem de Satélite": satelite }).addTo(mapa);
@@ -60,53 +58,49 @@
       return match ? [parseFloat(match[2]), parseFloat(match[1])] : null;
     }
 
-    const faceIcon = L.divIcon({
-      className: 'face-icon',
-      html: '<div style="background:#004aad;width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>',
-      iconSize: [10, 10]
+    const quadraIcon = L.divIcon({
+      className: 'quadra-icon',
+      html: '<div style="background:#007a33;width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>',
+      iconSize: [12, 12]
     });
 
-    async function carregarFaces(cod_municipio) {
-      console.log("carregarFaces");
+    async function carregarQuadras(cod_municipio) {
       try {
-        const url = `https://superciata.smuu.com.br:21079/superciata/retorna_CN_FACES?cod_municipio=${cod_municipio}`;
+        const url = `https://superciata.smuu.com.br:21079/superciata/retorna_CN_QUADRAS?cod_municipio=${cod_municipio}`;
         const resp = await fetch(url);
         const dados = await resp.json();
 
+        // 🔹 Verifica se veio um array e se está vazio
         if (!Array.isArray(dados) || dados.length === 0) {
-          alert(`Nenhuma face CNEFE foi encontrada para o município ${cod_municipio}.\nVerifique se foi feita a carga de dados.`);
+          //console.warn("⚠️ Nenhum ponto encontrado para o município:", cod_municipio);
+          alert(`Nenhuma quadra CNEFE foi encontrada para o município ${cod_municipio}.\nVerifique se foi feita a carga de dados.`);
           return;
         }
 
         const markers = [];
-        dados.forEach(face => {
-          const coords = parseCoords(face.CENTROIDE);
+        dados.forEach(quadra => {
+          const coords = parseCoords(quadra.CENTROIDE);
           if (!coords) return;
 
-          const marker = L.marker(coords, { icon: faceIcon }).addTo(mapa);
+          const marker = L.marker(coords, { icon: quadraIcon }).addTo(mapa);
           marker.bindPopup(`
-            <b>Face:</b> ${face.ID_FACE}<br>
-            <b>Quadra:</b> ${face.ID_QUADRA}<br>
-            <b>Logradouro:</b> ${face.NOM_LOGRADOURO || "-"}<br>
-            <b>Pontos:</b> ${face.QTD_PONTOS}<br>
+            <b>Quadra:</b> ${quadra.ID_QUADRA}<br>
+            <b>Pontos:</b> ${quadra.QTD_PONTOS}<br>
             <b>Lat:</b> ${coords[0].toFixed(6)}<br>
             <b>Lng:</b> ${coords[1].toFixed(6)}
           `);
           markers.push(marker);
         });
 
-        // Comentado para manter a centralização manual que você solicitou
-        /*
         if (markers.length > 0) {
           mapa.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
         }
-        */
       } catch (e) {
-        console.error("Erro ao carregar faces:", e);
+        console.error("Erro ao carregar quadras:", e);
       }
     }
 
-    carregarFaces(cod_municipio);
+    carregarQuadras(cod_municipio);
   </script>
 </body>
 

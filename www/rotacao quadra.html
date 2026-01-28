@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SuperCIATA - Quadra no Centroide</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        .info {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Quadra Rotacionada no Centroide Selecionado</h2>
+    <div class="info" id="info">Calculando azimute da Avenida Ubirajaras...</div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Coordenadas que serão o CENTROIDE do retângulo
+        const centroLat = -25.68088;
+        const centroLng = -53.80357;
+
+/*        const centroLat = -25.6805;
+        const centroLng = -53.8024;
+*/
+        const map = L.map('map').setView([centroLat, centroLng], 18);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marcador do Centroide Real
+        L.marker([centroLat, centroLng]).addTo(map).bindPopup("Centroide da Quadra");
+
+        // --- MOTOR GEOMÉTRICO ---
+
+        function getAzimuth(p1, p2) {
+            const dLng = (p2[1] - p1[1]) * Math.PI / 180;
+            const lat1 = p1[0] * Math.PI / 180;
+            const lat2 = p2[0] * Math.PI / 180;
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        function rotatePoint(center, point, azimuth) {
+            const angleRad = azimuth * Math.PI / 180;
+            const cos = Math.cos(angleRad);
+            const sin = Math.sin(angleRad);
+            const dy = point[0] - center[0];
+            const dx = point[1] - center[1];
+
+            // Rotação Horária (Azimute Geográfico)
+            const rx = dx * cos + dy * sin;
+            const ry = -dx * sin + dy * cos;
+            return [ry + center[0], rx + center[1]];
+        }
+
+        // --- CONSULTA OVERPASS ---
+
+        const query = `[out:json][timeout:25];
+            way["highway"]["name"="Rua Santa Catarina"](around:50, ${centroLat}, ${centroLng});
+            out body; >; out skel qt;`;
+
+        /*        const query = `[out:json][timeout:25];
+                    way["highway"]["name"="Avenida Ubirajaras"](around:50, ${centroLat}, ${centroLng});
+                    out body; >; out skel qt;`;
+        */
+        async function carregarDados() {
+            try {
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: query
+                });
+                const data = await response.json();
+                const nodesMap = {};
+                data.elements.forEach(el => { if (el.type === 'node') nodesMap[el.id] = [el.lat, el.lon]; });
+
+                const way = data.elements.find(el => el.type === "way");
+                if (way) {
+                    const coords = way.nodes.map(id => nodesMap[id]);
+                    const azimuth = getAzimuth(coords[0], coords[coords.length - 1]);
+
+                    // Desenha a linha da rua para referência
+                    L.polyline(coords, { color: 'blue', weight: 2, dashArray: '5, 10' }).addTo(map);
+
+                    // --- CRIAÇÃO DO RETÂNGULO 60m x 50m ---
+                    // Fatores de conversão metros -> graus
+                    const mLat = 1 / 111132;
+                    const mLng = 1 / (111132 * Math.cos(centroLat * Math.PI / 180));
+
+                    const halfW = (60 * mLng) / 2;
+                    const halfH = (50 * mLat) / 2;
+
+                    // Vértices relativos ao centroide (Alinhados ao Norte)
+                    let verticesBase = [
+                        [centroLat + halfH, centroLng - halfW],
+                        [centroLat + halfH, centroLng + halfW],
+                        [centroLat - halfH, centroLng + halfW],
+                        [centroLat - halfH, centroLng - halfW]
+                    ];
+
+                    // Aplicar rotação em cada vértice em torno do centroide fixo
+                    const centroide = [centroLat, centroLng];
+                    const quadraFinal = verticesBase.map(v => rotatePoint(centroide, v, azimuth));
+
+                    L.polygon(quadraFinal, {
+                        color: '#2c3e50',
+                        fillColor: '#3498db',
+                        fillOpacity: 0.6,
+                        weight: 3
+                    }).addTo(map).bindPopup(`<b>Quadra Processada</b><br>Azimute: ${azimuth.toFixed(2)}°<br>Dimensões: 60x50m`);
+
+                    document.getElementById('info').innerHTML = `
+                        <b>Centroide:</b> ${centroLat}, ${centroLng}<br>
+                        <b>Azimute da Via:</b> ${azimuth.toFixed(2)}° (Avenida Ubirajaras)
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('info').innerText = "Erro na conexão com Overpass API.";
+            }
+        }
+
+        carregarDados();
+    </script>
+</body>
+
+</html>
