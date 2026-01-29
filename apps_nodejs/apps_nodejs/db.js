@@ -502,16 +502,19 @@ async function preenche_CN_QUADRAS() {
     SELECT 
         f.ID_QUADRA,
         f.COD_MUNICIPIO,
-        GROUP_CONCAT(
-          COALESCE(f.SC_ID_LOGRADOURO, '') 
-          ORDER BY f.SC_ID_LOGRADOURO 
-          SEPARATOR ','
-        ) AS SC_ID_QUADRA,
+        -- SC_ID_QUADRA
+        CONCAT('["', 
+          GROUP_CONCAT(COALESCE(f.SC_ID_LOGRADOURO, '')
+            ORDER BY f.SC_ID_LOGRADOURO 
+            SEPARATOR '","'), 
+        '"]') AS SC_ID_QUADRA,
+        -- ORDEM_FACES
+        CONCAT('["', 
         GROUP_CONCAT(
           COALESCE(f.SC_ID_LOGRADOURO, '') 
           ORDER BY f.NR_ORDEM 
-          SEPARATOR ','
-        ) AS ORDEM_FACES,
+          SEPARATOR '","'),
+        '"]') AS ORDEM_FACES,
         SUM(f.QTD_PONTOS) AS QTD_PONTOS,
             -- Calcular centroide manualmente (média das coordenadas)
         ST_GEOMFROMTEXT(
@@ -559,26 +562,22 @@ async function complementa_CN_QUADRAS() {
   console.log(`Preenchendo SC_ID_QUADRA em CN_QUADRAS`);
 
   const query = `
-      UPDATE CN_QUADRAS q
-      JOIN (
-          SELECT 
-              f.ID_QUADRA,
-              CONCAT(
-                  '[',
-                  GROUP_CONCAT(
-                      DISTINCT CONCAT('"', l.SC_ID_LOGRADOURO, '"')
-                      ORDER BY l.SC_ID_LOGRADOURO SEPARATOR ','
-                  ),
-                  ']'
-              ) AS SC_ID_QUADRA
-          FROM CN_FACES f
-          INNER JOIN CN_LOGRADOUROS l
-              ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
-              AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
-          GROUP BY f.ID_QUADRA
-      ) AS x
-          ON x.ID_QUADRA = q.ID_QUADRA
-      SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;
+    UPDATE CN_QUADRAS q
+    JOIN (
+      SELECT 
+        f.ID_QUADRA,
+        -- Constrói o array usando aspas duplas literais
+        CONCAT('["', 
+          GROUP_CONCAT(SC_ID_LOGRADOURO ORDER BY SC_ID_LOGRADOURO SEPARATOR '","'), 
+        '"]') AS SC_ID_QUADRA
+        FROM CN_FACES f
+        INNER JOIN CN_LOGRADOUROS l
+          ON l.COD_MUNICIPIO = f.COD_MUNICIPIO
+          AND l.NOM_LOGRADOURO = f.NOM_LOGRADOURO
+        GROUP BY f.ID_QUADRA
+      ) AS x 
+    ON x.ID_QUADRA = q.ID_QUADRA
+    SET q.SC_ID_QUADRA = x.SC_ID_QUADRA;
   `;
 
   try {
@@ -1212,3 +1211,6 @@ module.exports = {
   cria_CI_QUADRAS,
   preenche_CI_QUADRAS
 };
+
+
+
