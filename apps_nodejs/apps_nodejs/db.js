@@ -1080,7 +1080,16 @@ async function preenche_CI_FACES() {
           LG.SC_ID_LOGRADOURO,
           COUNT(*) AS QTD_LOTES,
           SUM(LT.DIM_TESTADA) AS DIM_FACE
-      FROM CI_LOTES LT
+      FROM (
+          /* Subconsulta para eliminar duplicatas de COD_UNICO_ENDERECO */
+          SELECT DISTINCT 
+              COD_MUNICIPIO, 
+              NUM_QUADRA, 
+              NOM_LOGRADOURO, 
+              COD_UNICO_ENDERECO, 
+              DIM_TESTADA
+          FROM CI_LOTES
+      ) LT
       JOIN CI_LOGRADOUROS LG 
           ON (LT.NOM_LOGRADOURO = LG.CI_NOM_LOGRADOURO)
           AND (LT.COD_MUNICIPIO = LG.COD_MUNICIPIO)
