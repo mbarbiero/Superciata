@@ -351,3 +351,34 @@ WHERE SC_ID_QUADRA IN (
     '["6B8E7F2D","736565AB","9E705E10","E544EA7B"]'
 )
 GROUP BY SC_ID_QUADRA;
+
+SELECT 
+    JSON_OBJECT(
+        'sc_id_quadra', F.SC_ID_QUADRA,
+        'faces', JSON_EXTRACT(
+            CONCAT('[', 
+                GROUP_CONCAT(
+                    JSON_OBJECT(
+                        'ordem_face', F.ORDEM_FACE,
+                        'dim_face', F.DIM_FACE,
+                        'sc_id_face', F.SC_ID_FACE,
+                        'sc_id_logradouro', F.SC_ID_LOGRADOURO,
+                        'nome_logradouro', L.NOM_LOGRADOURO, -- Nome vindo da tabela CN_LOGRADOURO
+                        'centroide', JSON_OBJECT(
+                            'lat', ST_Y(F.CENTROIDE),
+                            'lng', ST_X(F.CENTROIDE)
+                        )
+                    )
+                ), 
+            ']'),
+            '$'
+        )
+    ) AS quadra_json
+FROM SC_FACES F
+LEFT JOIN CN_LOGRADOUROS L ON F.SC_ID_LOGRADOURO = L.SC_ID_LOGRADOURO
+WHERE F.SC_ID_QUADRA IN (
+    '["0E9A43FC","37EBE4BB","5C81EDF2","EF2B51D7"]',
+    '["1558A9D1","9003F37C","F0D334EC","F54DE0AF"]',
+    '["6B8E7F2D","736565AB","9E705E10","E544EA7B"]'
+)
+GROUP BY F.SC_ID_QUADRA;
