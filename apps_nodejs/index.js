@@ -40,6 +40,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Permite que o Express leia corpos de requisição em formato de texto/sql
+app.use(express.text({ type: 'application/sql' }));
+app.use(express.text({ type: 'text/plain' })); // Por segurança
+
 // Certificados HTTPS
 const options = {
   key: fs.readFileSync("smuu.com.br.key"),
@@ -48,7 +52,7 @@ const options = {
 
 // Servidor em HTTPS
 https.createServer(options, app).listen(PORT, () => {
-    console.log(`Servidor HTTPS rodando em https://localhost:${PORT}`);
+  console.log(`Servidor HTTPS rodando em https://localhost:${PORT}`);
 });
 /*
 https.createServer(options, app).listen(PORT, () => {
@@ -57,7 +61,7 @@ https.createServer(options, app).listen(PORT, () => {
 */
 // 🔹 Rota GET para testar conexão MySQL
 app.get("/", async (req, res) => {
-    res.json({ sucesso: true, mensagem: `Porta ${PORT} funcionando` });
+  res.json({ sucesso: true, mensagem: `Porta ${PORT} funcionando` });
 });
 
 // 🔹 Rota GET para testar conexão MySQL
@@ -247,7 +251,7 @@ app.get('/superciata/preenche_CN_FACES', async (req, res) => {
 
 // 🔹 Rota GET para complementar CN_FACES
 app.get('/superciata/complementa_CN_FACES', async (req, res) => {
-  const { cod_municipio} = req.query;
+  const { cod_municipio } = req.query;
 
   try {
     const resultado = await db.Complementa_CN_FACES(`SC_ID_LOGRADOURO`);
@@ -739,4 +743,147 @@ app.get("/superciata/preenche_CI_QUADRAS", async (req, res) => {
       detalhes: "Erro ao carregar CI_QUADRAS"
     });
   }
+});
+
+// 🔹 Rota GET para buscar os dois pontos mais próximos de um logradouro
+app.get('/superciata/pontos_por_logradouro', async (req, res) => {
+  const { sc_id, lat, lng } = req.query;
+
+  try {
+    // A query DEVE filtrar pelo sc_id recebido
+    const sql = `
+      SELECT 
+        SC_ID_LOGRADOURO,
+        NOM_LOGRADOURO,
+        ST_AsText(GEOMETRIA) AS WKT
+      FROM OSM_LOGRADOUROS
+      WHERE SC_ID_LOGRADOURO = "${sc_id}" 
+      LIMIT 1
+    `;
+
+    const resultados = await db.executaQuery(sql);
+
+    if (resultados.length === 0) {
+      return res.status(404).json({ sucesso: false, mensagem: 'Logradouro não encontrado no banco.' });
+    }
+
+    const logradouro = resultados[0];
+    // A função abaixo fatia a linha e pega o segmento perto da lat/lng informada
+    const segmento = extrairDoisPontosMaisProximos(logradouro.WKT, parseFloat(lat), parseFloat(lng));
+
+    res.json({
+      sucesso: true,
+      sc_id: logradouro.SC_ID_LOGRADOURO,
+      nome: logradouro.NOM_LOGRADOURO,
+      segmento_proximo: segmento
+    });
+
+  } catch (error) {
+    res.status(500).json({ sucesso: false, mensagem: error.message });
+  }
+});
+
+/**
+ * Auxiliar: Processa a string LINESTRING e encontra o segmento (2 pontos) 
+ * cuja média de distância é a menor em relação ao ponto alvo.
+ */
+function extrairDoisPontosMaisProximos(wkt, targetLat, targetLng) {
+  // Limpa a string: "LINESTRING(-53.1 -25.2, -53.2 -25.3)" -> "-53.1 -25.2, -53.2 -25.3"
+  const coordsStr = wkt.replace('LINESTRING(', '').replace(')', '');
+  const pares = coordsStr.split(',').map(p => {
+    const [lon, lat] = p.trim().split(' ');
+    return [parseFloat(lat), parseFloat(lon)];
+  });
+
+  let melhorSegmento = [];
+  let menorDistancia = Infinity;
+
+  // Itera sobre os segmentos (pares de pontos consecutivos)
+  for (let i = 0; i < pares.length - 1; i++) {
+    const p1 = pares[i];
+    const p2 = pares[i + 1];
+
+    // Calcula a distância do ponto médio do segmento ao alvo (simplificado)
+    const midLat = (p1[0] + p2[0]) / 2;
+    const midLng = (p1[1] + p2[1]) / 2;
+    const dist = Math.sqrt(Math.pow(targetLat - midLat, 2) + Math.pow(targetLng - midLng, 2));
+
+    if (dist < menorDistancia) {
+      menorDistancia = dist;
+      melhorSegmento = [p1, p2];
+    }
+  }
+
+  return melhorSegmento;
+}
+
+// SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_
+// SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_
+// SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_ SC2_
+
+const config = require('./sc2_config');
+const { executa_sql } = require('./sc2_dbExecutor');
+app.use(express.text({ type: ['application/sql', 'text/plain'], limit: '100mb' }));
+
+// Hello World
+// Hello World
+// Hello World
+app.get('/sc2_/hello', (req, res) => {
+  res.json({
+    projeto: "SuperCIATA 2.0",
+    status: "online",
+    acesso: "smuu.com.br/sc_2",
+    timestamp: new Date().toLocaleString('pt-BR')
+  });
+});
+
+// Teste de Conexão com o Banco
+// Teste de Conexão com o Banco
+// Teste de Conexão com o Banco
+app.get('/sc2_/test_db', async (req, res) => {
+  const mysql = require('mysql2/promise');
+  const { executarProcedimento } = require('./dbExecutor');
+
+  let connection;
+  // Configuração do BD smuu.com.br
+  const dbConfig = {
+    host: 'mysql.smuu.com.br',
+    user: 'smuu_add1',
+    password: 'SmuuBd1',
+    database: 'smuu',
+    port: 3306,
+  };
+
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    const [rows] = await connection.query('SELECT VERSION() as versao');
+    res.json({
+      sucesso: true,
+      banco: "MariaDB (mysql.smuu.com.br)",
+      versao: rows[0].versao
+    });
+  } catch (err) {
+    res.status(500).json({ sucesso: false, erro: err.message });
+  } finally {
+    if (connection) await connection.end();
+  }
+});
+
+// executar_lote SQL
+// executar_lote SQL
+// executar_lote SQL
+app.post('/sc2_/executa_sql', async (req, res) => {
+    const input = req.headers['x-sql-path'] || req.body;
+    const nomeProc = req.headers['x-procedimento'] || 'SC2_Processo_Hibrido';
+
+    if (!input || (typeof input === 'string' && input.trim() === "")) {
+        return res.status(400).json({ sucesso: false, erro: "Entrada SQL ou path vazios." });
+    }
+
+    try {
+        const resultado = await executa_sql(input, nomeProc);
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
 });

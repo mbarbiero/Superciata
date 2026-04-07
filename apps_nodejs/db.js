@@ -150,9 +150,8 @@ async function preenche_CN_PONTOS(arquivoPath) {
       throw new Error(`Arquivo não encontrado: ${arquivoPath}`);
     }
 
-
-
     const caminhoUnix = arquivoPath.replace(/\\/g, '/');
+    
     console.log(`Preparando LOAD DATA LOCAL INFILE: ${caminhoUnix}`);
     // Query com LOCAL INFILE
     const query = `
@@ -171,8 +170,9 @@ async function preenche_CN_PONTOS(arquivoPath) {
         NOM_COMP_ELEM5, VAL_COMP_ELEM5, LATITUDE, LONGITUDE, NV_GEO_COORD,
         COD_ESPECIE, DSC_ESTABELECIMENTO, COD_INDICADOR_ESTAB_ENDERECO,
         COD_INDICADOR_CONST_ENDERECO, COD_INDICADOR_FINALIDADE_CONST, COD_TIPO_ESPECI
-      )
+      );
     `;
+    console.log(query);
     const [resultado] = await connection.query(query);
     return resultado;
   } catch (error) {
@@ -226,25 +226,28 @@ async function preenche_CN_PONTOS_UNICOS() {
     resultado = await executaQuery(query);
 
     query = `  
-      -- Cria tabela temporária com endereços válidos
       CREATE TABLE TMP_ENDERECOS_BASE AS
       SELECT 
-        COD_MUNICIPIO,
-        COD_UNICO_ENDERECO,
-        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
-        CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
-        TRIM(
-          CONCAT_WS(' ',
-            NULLIF(TRIM(NOM_TIPO_SEGLOGR), ''),
-            NULLIF(TRIM(NOM_TITULO_SEGLOGR), ''),
-            NULLIF(TRIM(NOM_SEGLOGR), '')
-          )
-        ) AS NOM_LOGRADOURO,
-        NUM_ENDERECO,
-        LATITUDE,
-        LONGITUDE
+          COD_MUNICIPIO,
+          COD_UNICO_ENDERECO,
+          -- No MySQL use CONCAT(), no Postgres use ||
+          CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0')) AS ID_QUADRA,
+          CONCAT(COD_SETOR, LPAD(NUM_QUADRA, 3, '0'), LPAD(NUM_FACE, 3, '0')) AS ID_FACE,
+          TRIM(
+            CONCAT_WS(' ',
+              NULLIF(TRIM(NOM_TIPO_SEGLOGR), ''),
+              NULLIF(TRIM(NOM_TITULO_SEGLOGR), ''),
+              NULLIF(TRIM(NOM_SEGLOGR), '')
+            )
+          ) AS NOM_LOGRADOURO,
+          NUM_ENDERECO,
+          LATITUDE,
+          LONGITUDE
       FROM CN_PONTOS
-      WHERE NV_GEO_COORD < '4';
+      WHERE 
+        NV_GEO_COORD < '4'
+          AND 
+        NUM_QUADRA > 0;
     `;
     // somente quadras urbanas?      --WHERE NUM_QUADRA > 0 AND NV_GEO_COORD < '4';
     resultado = await executaQuery(query);
@@ -467,13 +470,13 @@ async function cria_CN_QUADRAS() {
   console.log(`Criando CN_QUADRAS`);
   const query = `
     CREATE TABLE IF NOT EXISTS CN_QUADRAS (
-      ID_QUADRA           VARCHAR(19),
-      COD_MUNICIPIO       VARCHAR(7),
       SC_ID_QUADRA        VARCHAR(250),
-      ORDEM_FACES         VARCHAR(250),
+      COD_MUNICIPIO       VARCHAR(7),
+      ID_QUADRA           VARCHAR(19),
       QTD_PONTOS          INT,
       CENTROIDE           POINT
-    );`
+    );
+  `;
   try {
     await executaQuery(query);
 
@@ -492,29 +495,22 @@ async function preenche_CN_QUADRAS() {
 
   console.log(`Preparando CN_QUADRAS`);
 
-  const query = `INSERT INTO CN_QUADRAS (
-        ID_QUADRA, 
-        COD_MUNICIPIO, 
+  const query = `
+    INSERT INTO CN_QUADRAS (
         SC_ID_QUADRA, 
-        ORDEM_FACES, 
+        COD_MUNICIPIO, 
+        ID_QUADRA, 
         QTD_PONTOS, 
         CENTROIDE)
     SELECT 
-        f.ID_QUADRA,
-        f.COD_MUNICIPIO,
         -- SC_ID_QUADRA
         CONCAT('["', 
           GROUP_CONCAT(COALESCE(f.SC_ID_LOGRADOURO, '')
             ORDER BY f.SC_ID_LOGRADOURO 
             SEPARATOR '","'), 
         '"]') AS SC_ID_QUADRA,
-        -- ORDEM_FACES
-        CONCAT('["', 
-        GROUP_CONCAT(
-          COALESCE(f.SC_ID_LOGRADOURO, '') 
-          ORDER BY f.NR_ORDEM 
-          SEPARATOR '","'),
-        '"]') AS ORDEM_FACES,
+        f.COD_MUNICIPIO,
+        f.ID_QUADRA,
         SUM(f.QTD_PONTOS) AS QTD_PONTOS,
             -- Calcular centroide manualmente (média das coordenadas)
         ST_GEOMFROMTEXT(
@@ -536,7 +532,8 @@ async function preenche_CN_QUADRAS() {
         f.COD_MUNICIPIO
     ORDER BY 
         f.COD_MUNICIPIO, 
-        f.ID_QUADRA;`;
+        f.ID_QUADRA;
+    `;
 
   console.log('Executando carga de dados...');
 
@@ -1039,7 +1036,7 @@ async function cria_CI_FACES() {
   console.log(`Criando CI_FACES`);
   const query = `
     CREATE TABLE IF NOT EXISTS CI_FACES (
-      ID_FACE           VARCHAR(65),
+      ID_FACE           VARCHAR(67),
       COD_MUNICIPIO     VARCHAR(7),
       ID_QUADRA         VARCHAR(50),
       SC_ID_LOGRADOURO  VARCHAR(8),
@@ -1074,13 +1071,22 @@ async function preenche_CI_FACES() {
           DIM_FACE
       )
       SELECT 
-          CONCAT(LT.COD_MUNICIPIO, LT.NUM_QUADRA, LG.SC_ID_LOGRADOURO) AS ID_FACE,
+          CONCAT(LT.COD_MUNICIPIO, ";", TRIM(LT.NUM_QUADRA), ";", LG.SC_ID_LOGRADOURO) AS ID_FACE,
           LT.COD_MUNICIPIO, 
           LT.NUM_QUADRA AS ID_QUADRA, 
           LG.SC_ID_LOGRADOURO,
           COUNT(*) AS QTD_LOTES,
           SUM(LT.DIM_TESTADA) AS DIM_FACE
-      FROM CI_LOTES LT
+      FROM (
+          /* Subconsulta para eliminar duplicatas de COD_UNICO_ENDERECO */
+          SELECT DISTINCT 
+              COD_MUNICIPIO, 
+              NUM_QUADRA, 
+              NOM_LOGRADOURO, 
+              COD_UNICO_ENDERECO, 
+              DIM_TESTADA
+          FROM CI_LOTES
+      ) LT
       JOIN CI_LOGRADOUROS LG 
           ON (LT.NOM_LOGRADOURO = LG.CI_NOM_LOGRADOURO)
           AND (LT.COD_MUNICIPIO = LG.COD_MUNICIPIO)
@@ -1104,6 +1110,93 @@ async function preenche_CI_FACES() {
 
   } catch (error) {
     console.error('Erro ao preencher dados na tabela CI_FACES:', error);
+    throw error;
+  }
+}
+
+// 🔹🔹🔹 CI_ADJACENTES 🔹🔹🔹
+// Função para criar CI_ADJACENTES()
+async function cria_CI_ADJACENTES() {
+  console.log(`Criando CI_ADJACENTES`);
+  const query = `
+    CREATE TABLE IF NOT EXISTS CI_ADJACENTES (
+      ID_FACE           VARCHAR(67),
+      COD_MUNICIPIO     VARCHAR(7),
+      ID_QUADRA         VARCHAR(50),
+      SC_ID_LOGRADOURO  VARCHAR(8),
+      DIM_ADJACENTE     DECIMAL(6,2)                                                                                                   
+    );
+    `
+  try {
+    await executaQuery(query);
+
+    const resultado = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_ADJACENTES criada com sucesso."
+    }
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// 🔹 Função para preencher CI_ADJACENTES
+async function preenche_CI_ADJACENTES() {
+  console.log('Preenchendo CI_ADJACENTES');
+
+  var resultado = '';
+  const query = `
+--  Atualizando as faces em ADJACENTES
+    INSERT INTO CI_ADJACENTES (
+      ID_FACE, 
+      COD_MUNICIPIO, 
+      ID_QUADRA, 
+      SC_ID_LOGRADOURO, 
+      DIM_ADJACENTE
+    )
+    SELECT 
+      CONCAT(
+          LT.COD_MUNICIPIO, “;”, LT.NUM_QUADRA, “;”, LG.SC_ID_LOGRADOURO
+        ) AS ID_FACE,
+      LT.COD_MUNICIPIO, 
+      LT.NUM_QUADRA AS ID_QUADRA, 
+      LG.SC_ID_LOGRADOURO,
+      SUM(LT.DIM_PROFUNDIDADE) AS DIM_ADJACENTE
+    FROM (
+      /* Subconsulta para eliminar duplicatas de COD_UNICO_ENDERECO */
+      SELECT DISTINCT 
+        COD_MUNICIPIO, 
+        NUM_QUADRA, 
+        NOM_LOGRADOURO_ADJACENTE, 
+        COD_UNICO_ENDERECO, 
+        DIM_PROFUNDIDADE
+      FROM CI_LOTES
+      WHERE 
+        NOM_LOGRADOURO_ADJACENTE <> ""
+    ) LT
+    JOIN CI_LOGRADOUROS LG 
+      ON (LT.NOM_LOGRADOURO_ADJACENTE = LG.CI_NOM_LOGRADOURO)
+      AND (LT.COD_MUNICIPIO = LG.COD_MUNICIPIO)
+    GROUP BY 
+      LT.COD_MUNICIPIO, 
+      LT.NUM_QUADRA, 
+      LG.SC_ID_LOGRADOURO;
+   `;
+  console.log('Executando carga de dados...');
+
+  try {
+    const resultado = await executaQuery(query);
+
+    const resp = {
+      "sucesso": true,
+      "mensagem": "Tabela CI_ADJACENTES preenchida com sucesso.",
+      "linhas incluídas": resultado.affectedRows
+    }
+    console.log(`Carga concluída: ${resultado.affectedRows}`);
+    return resp;
+
+  } catch (error) {
+    console.error('Erro ao preencher dados na tabela CI_ADJACENTES:', error);
     throw error;
   }
 }

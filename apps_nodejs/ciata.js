@@ -9,7 +9,8 @@ const SQL_Cria_CI_LOTES = `
          NOM_LOGRADOURO_ADJACENTE   VARCHAR(250),
          DIM_TESTADA                DECIMAL(6,2),
          DIM_PROFUNDIDADE           DECIMAL(6,2)
-      );`;
+      );`
+   ;
 
 const SQL_Cria_CI_LOGRADOUROS = `
       CREATE TABLE IF NOT EXISTS CI_LOGRADOUROS (
@@ -17,7 +18,8 @@ const SQL_Cria_CI_LOGRADOUROS = `
          COD_MUNICIPIO                 VARCHAR(7),
          CI_NOM_LOGRADOURO_NORM        VARCHAR(250),
          CI_NOM_LOGRADOURO             VARCHAR(250)
-      );`;
+      );`
+   ;
 
 const SQL_Cria_CI_FACES = `
       CREATE TABLE IF NOT EXISTS CI_FACES (
@@ -34,9 +36,8 @@ const SQL_Cria_CI_QUADRAS = `
       CREATE TABLE IF NOT EXISTS CI_QUADRAS (
          SC_ID_LOGRADOURO              VARCHAR(8),
          COD_MUNICIPIO                 VARCHAR(7),
-      CI_NOM_LOGRADOURO_NORM        VARCHAR(250),
-      CI_NOM_LOGRADOURO             VARCHAR(250),
-
+         CI_NOM_LOGRADOURO_NORM        VARCHAR(250),
+         CI_NOM_LOGRADOURO             VARCHAR(250),
       );`;
 
 const SQL_Normaliza_CI_LOTES = `

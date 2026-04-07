@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visualização de Mapas - SuperCIATA</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    #mapa {
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 110px);
+      z-index: 0;
+    }
+
+    .municipio-info {
+      text-align: center;
+    }
+
+    .municipio-info h1 {
+      font-size: 1.4rem;
+      color: var(--brand-dark);
+      margin: 0;
+    }
+
+    .municipio-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .municipio-nome {
+      color: var(--brand-dark);
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 12px;
+      text-align: center;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA">
+    </div>
+    
+    <div class="municipio-info">
+      <h1>Visualização do Processamento</h1>
+      <div class="municipio-label">
+        Município: <span class="municipio-nome">Capanema - PR (4104501)</span>
+      </div>
+    </div>
+
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="javascript:history.back()">Voltar</a>
+    </nav>
+  </header>
+
+  <div id="mapa"></div>
+
+  <footer>
+    &copy; 2026 SuperCIATA - Geointeligência Urbanística
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const COD_MUNICIPIO = '4104501';
+    const mapa = L.map('mapa', { maxZoom: 22 }).setView([-25.6807, -53.8018], 19);
+
+    // Camadas de Background
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 22, maxNativeZoom: 19, attribution: '© OpenStreetMap'
+    }).addTo(mapa);
+
+    const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 22, maxNativeZoom: 18, attribution: 'Esri'
+    });
+
+    // Camadas de Frontend
+    const camadaFaces = L.layerGroup().addTo(mapa);
+    const camadaPontos = L.layerGroup().addTo(mapa);
+    const camadaQuadras = L.layerGroup().addTo(mapa);
+
+    L.control.layers(
+      { "Mapa de Ruas": osm, "Satélite": satelite },
+      { "Faces CNEFE": camadaFaces, "Pontos Únicos": camadaPontos, "Quadras CNEFE": camadaQuadras },
+      { collapsed: false }
+    ).addTo(mapa);
+
+    function parseWKT(wkt) {
+      if (!wkt) return null;
+      const match = wkt.match(/POINT\(([-0-9.]+) ([-0-9.]+)\)/);
+      return match ? [parseFloat(match[2]), parseFloat(match[1])] : null;
+    }
+
+    const smallIcon = L.icon({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconSize: [12, 20], iconAnchor: [6, 20], popupAnchor: [1, -18],
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png", shadowSize: [20, 20]
+    });
+
+    async function carregarDados() {
+      try {
+        // Carga Faces
+        const resF = await fetch(`https://superciata.smuu.com.br:21079/superciata/retorna_CN_FACES?cod_municipio=${COD_MUNICIPIO}`);
+        const faces = await resF.json();
+        faces.forEach(f => {
+          const p = parseWKT(f.CENTROIDE);
+          if (p) L.circleMarker(p, { radius: 5, color: '#004aad' }).addTo(camadaFaces).bindPopup(`Face: ${f.ID_FACE}`);
+        });
+
+        // Carga Pontos
+        const resP = await fetch(`https://superciata.smuu.com.br:21079/superciata/retorna_CN_PONTOS_UNICOS?cod_municipio=${COD_MUNICIPIO}`);
+        const pontos = await resP.json();
+        pontos.forEach(pt => {
+          const p = parseWKT(pt.COORDS);
+          if (p) L.marker(p, { icon: smallIcon }).addTo(camadaPontos).bindPopup(`Endereço: ${pt.NOM_LOGRADOURO}, ${pt.NUM_ENDERECO || 'S/N'}`);
+        });
+
+        // Carga Quadras
+        const resQ = await fetch(`https://superciata.smuu.com.br:21079/superciata/retorna_CN_QUADRAS?cod_municipio=${COD_MUNICIPIO}`);
+        const quadras = await resQ.json();
+        quadras.forEach(q => {
+          const p = parseWKT(q.CENTROIDE);
+          if (p) L.circleMarker(p, { radius: 8, color: '#007a33', weight: 3 }).addTo(camadaQuadras).bindPopup(`Quadra: ${q.ID_QUADRA}`);
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    carregarDados();
+  </script>
+</body>
+</html>

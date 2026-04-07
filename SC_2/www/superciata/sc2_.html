@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperCIATA 2.0 | Automação IBGE</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #27ae60;
+            --accent: #2980b9;
+            --bg: #f4f7f6;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        
+        .section-title { border-left: 4px solid var(--secondary); padding-left: 10px; margin: 20px 0 10px; color: var(--primary); font-size: 16px; text-transform: uppercase; }
+        
+        /* Grid de Parâmetros */
+        .params-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            gap: 15px; background: #fcfcfc; padding: 15px; border: 1px solid #eee; border-radius: 8px;
+        }
+        .field { display: flex; flex-direction: column; }
+        .field label { font-size: 10px; font-weight: bold; color: #7f8c8d; margin-bottom: 5px; }
+        .field input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
+
+        .actions { margin-top: 20px; display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        
+        .btn-file { background: var(--accent); } /* Botão para arquivo */
+        .btn-sql { background: var(--secondary); } /* Botão para texto direto */
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        textarea { width: 100%; height: 150px; margin-top: 10px; font-family: monospace; padding: 10px; border-radius: 6px; border: 1px solid #ddd; }
+        
+        #resTable { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 13px; }
+        .badge { padding: 3px 7px; border-radius: 3px; font-size: 10px; color: white; font-weight: bold; }
+        .bg-load { background: #9b59b6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin:0; color:var(--primary)">SuperCIATA 2.0</h2>
+        <span style="font-size: 11px; color: #999;">PPGTG - UFSC | v2.0</span>
+    </div>
+
+    <div class="section-title">Parâmetros do Template (${VAR})</div>
+    <div class="params-grid">
+        <div class="field">
+            <label>NOME DO ARQUIVO .SQL</label>
+            <input type="text" id="p_file_name" value="sc2_CN_PreencheTabelas.sql">
+        </div>
+        <div class="field">
+            <label>TABELA</label>
+            <input type="text" id="p_tabela" value="sc2_CN_PONTOS">
+        </div>
+        <div class="field">
+            <label>MUNICÍPIO</label>
+            <input type="text" id="p_municipio" value="4104501">
+        </div>
+        <div class="field">
+            <label>CAMINHO CSV</label>
+            <input type="text" id="p_csv" value="/home/smuu/arquivos/CSV/CNEFE.csv">
+        </div>
+        <div class="field">
+            <label>LIMITE</label>
+            <input type="number" id="p_limite" value="1000">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn-file" onclick="executarPorArquivo()">📂 EXECUTAR ARQUIVO SQL</button>
+    </div>
+
+    <div class="section-title">Editor de SQL Direto</div>
+    <textarea id="sqlManual" placeholder="Digite SQL direto aqui..."></textarea>
+    <div class="actions">
+        <button class="btn-sql" onclick="executarDireto()">⚡ EXECUTAR SQL TEXTO</button>
+    </div>
+
+    <div id="loader" style="display:none; text-align:center; padding:20px;">⌛ Processando no MariaDB...</div>
+
+    <table id="resTable">
+        <thead>
+            <tr>
+                <th>Passo</th>
+                <th>OP</th>
+                <th>Tabela</th>
+                <th>Registros</th>
+                <th>Tempo</th>
+            </tr>
+        </thead>
+        <tbody id="resBody"></tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = 'https://superciata.smuu.com.br:21079/sc2_/executa_sql';
+
+    // FUNÇÃO PARA EXECUTAR ARQUIVO (Usa executa_arquivo_sql no back-end)
+    async function executarPorArquivo() {
+        const payload = {
+            tipo: 'arquivo',
+            arquivo: document.getElementById('p_file_name').value,
+            parametros: {
+                TABELA: document.getElementById('p_tabela').value,
+                MUNICIPIO: document.getElementById('p_municipio').value,
+                CAMINHO_CSV: document.getElementById('p_csv').value,
+                LIMITE: document.getElementById('p_limite').value
+            }
+        };
+        await enviarRequisicao(payload);
+    }
+
+    // FUNÇÃO PARA EXECUTAR TEXTO (Usa executa_sql no back-end)
+    async function executarDireto() {
+        const sql = document.getElementById('sqlManual').value;
+        if(!sql) return alert("Escreva um SQL.");
+        await enviarRequisicao({ tipo: 'direto', sql: sql });
+    }
+
+    async function enviarRequisicao(corpo) {
+        const loader = document.getElementById('loader');
+        const table = document.getElementById('resTable');
+        const body = document.getElementById('resBody');
+
+        loader.style.display = "block";
+        table.style.display = "none";
+        body.innerHTML = "";
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(corpo)
+            });
+
+            const data = await response.json();
+            loader.style.display = "none";
+
+            if (data.sucesso) {
+                table.style.display = "table";
+                data.detalhes.forEach(item => {
+                    body.innerHTML += `
+                        <tr>
+                            <td>${item.passo}</td>
+                            <td><span class="badge bg-${item.operacao.toLowerCase()}">${item.operacao}</span></td>
+                            <td>${item.tabela}</td>
+                            <td style="font-weight:bold">${item.registros.toLocaleString('pt-BR')}</td>
+                            <td style="color:#999">${item.duration}ms</td>
+                        </tr>`;
+                });
+            } else { alert("Erro: " + data.erro); }
+        } catch (err) {
+            loader.style.display = "none";
+            alert("Falha na rede: " + err.message);
+        }
+    }
+</script>
+</body>
+</html>

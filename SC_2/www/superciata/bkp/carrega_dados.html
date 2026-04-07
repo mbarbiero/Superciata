@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload de Arquivos - SuperCIATA</title>
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --view-color: #6cb4ee;
+      --done: #111;
+      --text: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    .upload-container {
+      max-width: 960px;
+      margin: 30px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      color: #444;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      margin-bottom: 20px;
+      background: #fafafa;
+      position: relative;
+    }
+
+    .upload-area:hover {
+      border-color: var(--brand-light);
+      background: #f5f9ff;
+    }
+
+    .upload-area.dragover {
+      border-color: var(--brand-dark);
+      background: #e8f0ff;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      color: var(--brand-light);
+      margin-bottom: 10px;
+    }
+
+    .upload-area p {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
+    .upload-area .file-name {
+      margin-top: 12px;
+      font-weight: 600;
+      color: var(--brand-dark);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .botoes {
+      text-align: center;
+      margin: 15px 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--brand-light);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 14px;
+      min-width: 140px;
+    }
+
+    button:hover {
+      background: var(--brand-dark);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-limpar {
+      background: #6c757d;
+      min-width: 120px;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .btn-limpar:hover {
+      background: #5a6268;
+    }
+
+    #relatorio {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+      padding: 12px;
+      min-height: 100px;
+      max-height: 350px;
+      overflow-y: auto;
+      font-size: 13px;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .msg {
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 6px;
+      border-left: 4px solid;
+      font-size: 13px;
+    }
+
+    .info {
+      background: #e3f2fd;
+      color: #0d47a1;
+      border-left-color: #0d47a1;
+    }
+
+    .ok {
+      background: #e8f5e9;
+      color: #1b5e20;
+      border-left-color: #1b5e20;
+    }
+
+    .erro {
+      background: #ffebee;
+      color: #b71c1c;
+      border-left-color: #b71c1c;
+    }
+
+    .relatorio-footer {
+      text-align: right;
+      margin-top: 8px;
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 30px 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: auto;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 10px 20px;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      nav a {
+        margin: 0 10px;
+      }
+
+      .upload-area {
+        padding: 25px 15px;
+      }
+
+      .botoes {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      button {
+        width: 100%;
+        max-width: 280px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header
+    style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:10px 40px; border-bottom:1px solid #eee; background:#fff;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="logo">
+        <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana" style="height:52px;">
+      </div>
+    </div>
+    <h1 style="font-size:1.5rem; color:#004aad; margin:0;">Carga de Arquivos – CNEFE e CIATA</h1>
+    <nav style="display:flex; gap:20px; margin-top:6px;">
+      <a href="index.html" style="color:#222; text-decoration:none; font-weight:500;">Início</a>
+      <a href="javascript:history.back()" style="color:#222; text-decoration:none; font-weight:500;">Voltar</a>
+    </nav>
+  </header>
+
+
+  <main class="upload-container">
+
+    <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between;">
+      <!-- 1. Escolher Município -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Escolher Município</h3>
+        <label><b>Município selecionado:</b></label><br>
+        <span id="municipioAtual" style="display:inline-block; margin:8px 0; color:#004aad; font-weight:500;">
+          Nenhum município selecionado
+        </span><br>
+        <button id="btnEscolherMunicipio"
+          style="background:#0073e6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
+          Escolher Município
+        </button>
+      </div>
+
+      <!-- 2. Carregar Arquivo -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Carregar Arquivo</h3>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📁</div>
+          <p><strong>Clique aqui ou arraste um arquivo ZIP</strong></p>
+          <p style="font-size:14px; color:#666;">Arquivos suportados: <b>CNEFE</b> ou <b>CIATA</b></p>
+          <div class="file-name" id="fileName"></div>
+          <input type="file" id="arquivoZip" accept=".zip" />
+        </div>
+        <p style="font-size:13px; margin-top:8px;">
+          Se não tiver o arquivo CNEFE, pode baixá-lo
+          <a href="https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/CSV/Municipio/"
+            target="_blank" style="color:#0073e6; text-decoration:none; font-weight:500;">aqui</a>.
+        </p>
+        <div class="botoes">
+          <button id="btnCNEFE">Processar CNEFE</button>
+          <button id="btnCIATA">Processar CIATA</button>
+        </div>
+      </div>
+
+      <!-- 3. Relatório -->
+      <div
+        style="flex:1; min-width:280px; border:1px solid #ddd; border-radius:10px; padding:16px; background:#fafafa;">
+        <h3 style="margin-bottom:10px; color:#004aad;">Relatório</h3>
+        <div id="relatorio"></div>
+        <div class="relatorio-footer">
+          <button id="btnLimpar" class="btn-limpar">Limpar Relatório</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔹 Modal de aviso -->
+    <div id="modalAviso" style="
+      display:none;
+      position:fixed;
+      top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5);
+      z-index:2000;
+      justify-content:center;
+      align-items:center;">
+      <div style="
+        background:#fff;
+        border-radius:10px;
+        padding:24px 30px;
+        max-width:360px;
+        text-align:center;
+        box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <p id="textoAviso" style="color:#b71c1c; font-weight:500; margin-bottom:18px; line-height:1.4;">
+          No momento não é possível processar arquivos maiores do que 256 kB.
+        </p>
+        <button id="btnFecharAviso" style="
+          background:#0073e6;
+          color:#fff;
+          border:none;
+          border-radius:6px;
+          padding:8px 18px;
+          font-size:14px;
+          cursor:pointer;">
+          OK
+        </button>
+      </div>
+    </div>
+  </main>
+
+
+  <footer>
+    © <span id="year"></span> Superciata — Geoespacialização Urbana
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const relatorio = document.getElementById("relatorio");
+    const uploadArea = document.getElementById("uploadArea");
+    const inputArquivo = document.getElementById("arquivoZip");
+    const fileName = document.getElementById("fileName");
+    const btnCNEFE = document.getElementById("btnCNEFE");
+    const btnCIATA = document.getElementById("btnCIATA");
+
+    atualizarMunicipioAtual();
+    let nmArquivoCSV = '';
+
+    function atualizarEstadoBotoes() {
+      const temArquivo = inputArquivo.files.length > 0;
+      btnCNEFE.disabled = !temArquivo;
+      btnCIATA.disabled = !temArquivo;
+    }
+
+    function addMensagem(msg, tipo = "info") {
+      const linha = document.createElement("div");
+      linha.className = `msg ${tipo}`;
+      linha.textContent = msg;
+      relatorio.appendChild(linha);
+      relatorio.scrollTop = relatorio.scrollHeight;
+    }
+
+    async function EnviarArquivo() {
+      console.log('inputArquivo.files', inputArquivo.files);
+      const arquivo = inputArquivo.files[0];
+      if (!arquivo) {
+        addMensagem("⚠️ Escolha ou arraste um arquivo ZIP primeiro.", "erro");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("arqZip", arquivo);
+
+      // Desabilitar botões durante o processamento
+      btnCNEFE.disabled = true;
+      btnCIATA.disabled = true;
+      btnCNEFE.textContent = "Processando...";
+      btnCIATA.textContent = "Processando...";
+
+      addMensagem(`📤 Enviando ${arquivo.name}`, "info");
+
+      try {
+        var resposta = await fetch('https://superciata.smuu.com.br:21079/superciata/carrega_arqZip', { method: "POST", body: formData });
+        var resultado = await resposta.json();
+        if (resultado.sucesso) {
+          addMensagem("✅ " + (resultado.mensagem || "Processamento concluído com sucesso!"), "ok");
+          //cod_municipio = retCodMunicipio(arquivo.name);
+          nmArquivoCSV = arquivo.name.replace(/\.zip/i, '.csv');
+          if (cod_municipio.length > 0) {
+            addMensagem(`✅ Código do Município: ${cod_municipio}`, "ok");
+          }
+        } else {
+          addMensagem("❌ Erro: " + (resultado.mensagem || "Falha no processamento."), "erro");
+        }
+
+      } catch (e) {
+        addMensagem("❌ Erro de conexão: " + e.message, "erro");
+      } finally {
+        // Reabilitar botões após o processamento
+        btnCNEFE.disabled = false;
+        btnCIATA.disabled = false;
+        btnCNEFE.textContent = "Processar CNEFE";
+        btnCIATA.textContent = "Processar CIATA";
+      }
+    }
+
+    // ==== BOTÕES ====
+    btnCNEFE.onclick = () => ProcessaCNEFE();
+    btnCIATA.onclick = () => ProcessaCIATA();
+    document.getElementById("btnLimpar").onclick = () => {
+      relatorio.innerHTML = '';
+    };
+
+    // 🔹🔹🔹 retCodMunicipio() 🔹🔹🔹
+    function retCodMunicipio(nmArquivo) {
+      var codMunicipio = '';
+      if (nmArquivo.length > 7) {
+        var nmArquivo7 = nmArquivo.slice(0, 7);
+        if (!isNaN(+nmArquivo7) && !nmArquivo7.includes(' ')) {
+          codMunicipio = nmArquivo7;
+        }
+      }
+      return (codMunicipio);
+    }
+
+    async function ProcessaCNEFE() {
+      var resposta, resultado;
+
+      await EnviarArquivo();
+      await CriaCN_PONTOS();
+      await PreencheCN_PONTOS(cod_municipio);
+      await CriaCN_PONTOS_UNICOS();
+      await PreencheCN_PONTOS_UNICOS(cod_municipio);
+      await CriaCN_LOGRADOUROS();
+      await PreencheCN_LOGRADOUROS(cod_municipio);
+      await CriaCN_QUADRAS();
+      await PreencheCN_QUADRAS(cod_municipio);
+      await CriaCN_FACES();
+      await PreencheCN_FACES(cod_municipio);
+      // IMPORTANTE - ComplementaCN_QUADRAS deve vir depois de PreencheCN_FACES
+      await ComplementaCN_QUADRAS(cod_municipio);
+    }
+
+    async function CriaCN_PONTOS() {
+      addMensagem("Criando tabela CN_PONTOS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_PONTOS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_PONTOS(cod_municipio) {
+      addMensagem("Preenchendo CN_PONTOS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_PONTOS?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function CriaCN_PONTOS_UNICOS() {
+      addMensagem("Criando tabela CN_PONTOS_UNICOS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_PONTOS_UNICOS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_PONTOS_UNICOS(cod_municipio) {
+      addMensagem("Preenchendo CN_PONTOS_UNICOS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_PONTOS_UNICOS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function CriaCN_QUADRAS() {
+      addMensagem("Criando tabela CN_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_QUADRAS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_QUADRAS(cod_municipio) {
+      addMensagem("Preenchendo CN_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function ComplementaCN_QUADRAS(cod_municipio) {
+      addMensagem("Preenchendo SC_ID_QUADRA em CN_QUADRAS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/complementa_CN_QUADRAS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function CriaCN_FACES() {
+      addMensagem("Criando tabela CN_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_FACES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_FACES(cod_municipio) {
+      addMensagem("Preenchendo CN_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_FACES?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function CriaCN_LOGRADOUROS() {
+      addMensagem("Criando tabela CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CN_LOGRADOUROS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function PreencheCN_LOGRADOUROS(cod_municipio) {
+      addMensagem("Preenchendo CN_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CN_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function ProcessaCIATA() {
+      var resposta, resultado;
+
+      await EnviarArquivo();
+      await Cria_CI_LOTES();
+      await Preenche_CI_LOTES(cod_municipio);
+      await Cria_CI_LOGRADOUROS();
+      await Preenche_CI_LOGRADOUROS(cod_municipio);
+      await Normaliza_CI_LOGRADOUROS(cod_municipio);
+      await Atualiza_CI_LOGRADOUROS(cod_municipio);
+      await Cria_CI_FACES(cod_municipio);
+    }
+
+    async function Cria_CI_LOTES() {
+      addMensagem("Criando tabela CI_LOTES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOTES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Preenche_CI_LOTES(cod_municipio) {
+      addMensagem("Preenchendo CI_LOTES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOTES?nmArquivo=${encodeURIComponent(nmArquivoCSV)}&cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado preenchimento: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Cria_CI_LOGRADOUROS() {
+      addMensagem("Criando tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_LOGRADOUROS`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Preenche_CI_LOGRADOUROS() {
+      addMensagem("Preenche tabela CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/preenche_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Normaliza_CI_LOGRADOUROS(cod_municipio) {
+      addMensagem("Normalizando CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Atualiza_CI_LOGRADOUROS(cod_municipio) {
+      addMensagem("Atualizando CI_LOGRADOUROS...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/atualiza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
+    }
+
+    async function Cria_CI_FACES() {
+      addMensagem("Criando tabela CI_FACES...");
+      resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/cria_CI_FACES`, {
+        method: "GET"
+      });
+      resultado = await resposta.json();
+      addMensagem("Resultado criação: " + JSON.stringify(resultado, null, 2));
+    }
+
+    const MAX_FILE_SIZE = 300 * 1024; // 300 kB
+    const modalAviso = document.getElementById("modalAviso");
+    const textoAviso = document.getElementById("textoAviso");
+    const btnFecharAviso = document.getElementById("btnFecharAviso");
+
+    // Fecha o modal
+    btnFecharAviso.onclick = () => {
+      modalAviso.style.display = "none";
+    };
+
+    function mostrarAviso(mensagem) {
+      textoAviso.textContent = mensagem;
+      modalAviso.style.display = "flex";
+    }
+
+    function validarArquivo(arquivo) {
+      if (!arquivo.name.toLowerCase().endsWith(".zip")) {
+        addMensagem("⚠️ Apenas arquivos ZIP são aceitos.", "erro");
+        inputArquivo.value = "";
+        fileName.textContent = "";
+        atualizarEstadoBotoes();
+        return false;
+      }
+
+      if (arquivo.size > MAX_FILE_SIZE) {
+        const tamanhoKB = (arquivo.size / 1024).toFixed(1);
+        const mensagem = `O arquivo "${arquivo.name}" tem ${tamanhoKB} KB. No momento não é possível processar arquivos maiores do que 300 kB.`;
+        addMensagem(`❌ ${mensagem}`, "erro");
+
+        // Mostra o aviso visual e cancela o upload
+        mostrarAviso("No momento não é possível processar arquivos maiores do que 300 kB.");
+        inputArquivo.value = "";
+        fileName.textContent = "";
+        atualizarEstadoBotoes();
+        return false;
+      }
+
+      return true;
+    }
+
+    uploadArea.addEventListener("click", () => inputArquivo.click());
+
+    uploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadArea.classList.add("dragover");
+    });
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragover");
+    });
+
+    // --- DRAG & DROP ---
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+
+      const arquivo = e.dataTransfer.files[0];
+      if (arquivo && validarArquivo(arquivo)) {
+        inputArquivo.files = e.dataTransfer.files;
+        fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
+        addMensagem(`📦 Arquivo recebido: ${arquivo.name}`, "ok");
+        atualizarEstadoBotoes();
+      }
+    });
+
+    // --- SELEÇÃO MANUAL ---
+    inputArquivo.addEventListener("change", () => {
+      if (inputArquivo.files.length > 0) {
+        const arquivo = inputArquivo.files[0];
+        if (validarArquivo(arquivo)) {
+          fileName.textContent = `Arquivo selecionado: ${arquivo.name}`;
+          addMensagem(`📦 Arquivo selecionado: ${arquivo.name}`, "ok");
+        } else {
+          inputArquivo.value = "";
+          fileName.textContent = "";
+        }
+      } else {
+        fileName.textContent = "";
+      }
+      atualizarEstadoBotoes();
+    });
+
+    // Inicializar estado dos botões
+    atualizarEstadoBotoes();
+
+    // Atualiza o nome do município na tela
+    function atualizarMunicipioAtual() {
+      cod_municipio = localStorage.getItem('cod_municipio');
+      const nome = localStorage.getItem('nome_municipio');
+      const uf = localStorage.getItem('uf_municipio');
+      const span = document.getElementById('municipioAtual');
+      span.textContent = nome && uf ? `${nome} (${uf})` : "Nenhum município selecionado";
+    }
+
+    // Abre popup para escolher município
+    document.getElementById('btnEscolherMunicipio').addEventListener('click', () => {
+      const popup = window.open(
+        "escolher_municipio.html",
+        "popupMunicipio",
+        "width=420,height=480,resizable=no,scrollbars=no"
+      );
+
+      // Quando o popup fecha, atualiza automaticamente o nome
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          atualizarMunicipioAtual();
+        }
+      }, 500);
+    });
+
+    // Chamada inicial ao carregar a página
+    document.addEventListener("DOMContentLoaded", atualizarMunicipioAtual);
+
+  </script>
+</body>
+
+</html>

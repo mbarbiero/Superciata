@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visualização de Mapas - SuperCIATA</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --brand-light: #0073e6;
+      --brand-dark: #004aad;
+      --card-bg: rgba(255, 255, 255, 0.96);
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      flex-wrap: wrap;
+    }
+
+    header .logo img {
+      height: 48px;
+      width: auto;
+    }
+
+    nav a {
+      margin-left: 24px;
+      color: #222;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      color: var(--brand-light);
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 210px);
+      z-index: 0;
+    }
+
+    main {
+      position: absolute;
+      top: 140px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      width: 260px;
+      text-align: center;
+      padding: 25px 20px;
+      text-decoration: none;
+      color: #111;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .card h3 {
+      color: var(--brand-dark);
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    .card p {
+      color: #555;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .icon {
+      font-size: 40px;
+      color: var(--brand-light);
+    }
+
+    footer {
+      background: #111;
+      color: #aaa;
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: auto;
+    }
+
+    /* 🔹 Bloco do município */
+    .municipio-box {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fafafa;
+      padding: 8px 14px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .municipio-box span {
+      display: inline-block;
+      margin-top: 4px;
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+
+    .municipio-box button {
+      margin-top: 6px;
+      background: var(--brand-light);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .municipio-box button:hover {
+      background: var(--brand-dark);
+    }
+
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .card {
+        width: 80%;
+        max-width: 320px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="imagens/Logo%20SuperCIATA.png" alt="SuperCIATA - Geoespacialização Urbana">
+    </div>
+    <div style="text-align:center;">
+      <h1 style="font-size:1.5rem; color:#004aad; margin:0;">Visualização do Processamento</h1>
+      <div class="municipio-box">
+        <div><b>Município atual:</b></div>
+        <span id="municipioAtual">Nenhum município selecionado</span><br>
+        <button id="btnEscolherMunicipio">Escolher Município</button>
+      </div>
+    </div>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="javascript:history.back()">Voltar</a>
+    </nav>
+  </header>
+
+  <div id="map"></div>
+
+  <main>
+    <a id="linkPontos" class="card">
+      <div class="icon">📍</div>
+      <h3>Pontos Únicos - CNEFE</h3>
+      <p>Visualize os pontos únicos gerados a partir do cadastro CNEFE.</p>
+    </a>
+
+    <a id="linkQuadras" class="card">
+      <div class="icon">🧱</div>
+      <h3>Quadras - CNEFE</h3>
+      <p>Veja a espacialização das quadras criadas a partir dos logradouros.</p>
+    </a>
+
+    <a id="linkFaces" class="card">
+      <div class="icon">🧩</div>
+      <h3>Faces - CNEFE</h3>
+      <p>Explore as faces urbanas e suas relações espaciais.</p>
+    </a>
+  </main>
+
+  <footer>
+    © <span id="year"></span> SuperCIATA — Geoespacialização Urbana
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Atualiza o nome do município no header
+    function atualizarMunicipioAtual() {
+      const nome = localStorage.getItem('nome_municipio');
+      const uf = localStorage.getItem('uf_municipio');
+      const span = document.getElementById('municipioAtual');
+      span.textContent = nome && uf ? `${nome} (${uf})` : "Nenhum município selecionado";
+    }
+
+    // Botão para escolher município
+    document.getElementById('btnEscolherMunicipio').addEventListener('click', () => {
+      const popup = window.open(
+        "escolher_municipio.html",
+        "popupMunicipio",
+        "width=420,height=480,resizable=no,scrollbars=no"
+      );
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          atualizarMunicipioAtual();
+        }
+      }, 500);
+    });
+
+    atualizarMunicipioAtual();
+
+    // === CÓDIGO ORIGINAL ===
+    const map = L.map('map').setView([-15.8, -47.9], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    const lat = localStorage.getItem('lat_municipio');
+    const lon = localStorage.getItem('lon_municipio');
+    const codMunicipio = localStorage.getItem('cod_municipio');
+
+    if (lat && lon) {
+      map.setView([parseFloat(lat), parseFloat(lon)], 13);
+    }
+
+    function gerarLink(baseUrl) {
+      if (codMunicipio) {
+        return `${baseUrl}?cod_municipio=${encodeURIComponent(codMunicipio)}`;
+      } else {
+        alert("Código do município não definido.");
+        return "#";
+      }
+    }
+
+    document.getElementById("linkPontos").href = gerarLink("https://superciata.smuu.com.br/vis_pontos_unicos_CNEFE.html");
+    document.getElementById("linkQuadras").href = gerarLink("https://superciata.smuu.com.br/vis_quadras_CNEFE.html");
+    document.getElementById("linkFaces").href = gerarLink("https://superciata.smuu.com.br/vis_faces_CNEFE.html");
+  </script>
+</body>
+
+</html>

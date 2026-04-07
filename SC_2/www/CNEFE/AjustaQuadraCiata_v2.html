@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Rotacionar polígono com projeção métrica</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+</head>
+
+<body>
+  <div id="map" style="height: 100vh;"></div>
+
+  <script>
+    const map = L.map("map", {
+      center: [-19.6171, -43.2135],
+      zoom: 18,
+      crs: L.CRS.EPSG3857 // projeção métrica
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 22,
+      attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    const polygonCoords = [
+      { lat: -19.616918270694832, lng: -43.212874368654326 },
+      { lat: -19.617546780494834, lng: -43.212743558254324 },
+      { lat: -19.61779388610517, lng: -43.21400399734568 },
+      { lat: -19.617165376305167, lng: -43.21413480774568 }
+    ];
+    const declividade = calculatePolygonAngle(polygonCoords);
+    const declividadeRad = declividade * Math.PI / 180;
+
+
+    // Desenhar original
+    //L.polygon(polygonCoords, { color: "blue", fillOpacity: 0.3 }).addTo(map);
+
+    // Função para converter lat/lng → metros
+    function toMeters(p) {
+      return map.project([p.lat, p.lng], map.getZoom());
+    }
+
+    // Função para converter metros → lat/lng
+    function toLatLng(p) {
+      return map.unproject(p, map.getZoom());
+    }
+
+    // Centróide em metros
+    function getCentroidMeters(coords) {
+      let xSum = 0, ySum = 0;
+      coords.forEach(p => {
+        const m = toMeters(p);
+        xSum += m.x;
+        ySum += m.y;
+      });
+      return L.point(xSum / coords.length, ySum / coords.length);
+    }
+
+    // Rotaciona ponto (em metros)
+    function rotatePointMeters(p, center, angleRad) {
+      const dx = p.x - center.x;
+      const dy = p.y - center.y;
+      const x = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+      const y = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+      return L.point(x + center.x, y + center.y);
+    }
+
+    const overpassQuery = `
+      [out:json];
+      way["name"="Rua das Violetas"](around:300,-19.6171,-43.2135);
+      out geom;
+    `;
+ 
+
+    fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: overpassQuery
+    })
+      .then(res => res.json())
+      .then(data => {
+        const way = data.elements.find(el => el.type === "way");
+        if (!way) return alert("Rua não encontrada");
+
+        const coords = way.geometry;
+
+        // Cálculo da inclinação média
+        let totalAngle = 0, count = 0;
+        for (let i = 0; i < coords.length - 1; i++) {
+          const a = coords[i];
+          const b = coords[i + 1];
+          const dy = b.lat - a.lat;
+          const dx = b.lon - a.lon;
+          totalAngle += Math.atan2(dy, dx);
+          count++;
+        }
+
+        const avgAngleRad = totalAngle / count;
+        const avgAngleDeg = avgAngleRad * 180 / Math.PI;
+        console.log("Rua (graus):", avgAngleDeg.toFixed(2), 'Pol (graus):', declividade.toFixed(2));
+        console.log("Rua (rad  ):", avgAngleRad.toFixed(6), 'Pol (rad  ):', declividadeRad.toFixed(6));
+        console.log('Dif :', Math.abs(avgAngleRad) - declividadeRad);
+
+        // Rotacionar polígono
+        const center = getCentroidMeters(polygonCoords);
+        const rotated = polygonCoords.map(p => {
+          const m = toMeters(p);
+          const r = rotatePointMeters(m, center, Math.abs(avgAngleRad) - declividadeRad);
+          const ll = toLatLng(r);
+          return [ll.lat, ll.lng];
+        });
+
+        // Desenhar rotacionado
+        L.polygon(rotated, {
+          color: "red", fillOpacity: 0.3
+        }).addTo(map);
+
+        // Opcional: linha com direção da rua
+        const mid = coords[Math.floor(coords.length / 2)];
+        const len = 0.0004;
+        const dx = Math.cos(avgAngleRad) * len;
+        const dy = Math.sin(avgAngleRad) * len;
+        const p1 = [mid.lat - dy, mid.lon - dx];
+        const p2 = [mid.lat + dy, mid.lon + dx];
+
+        L.polyline([p1, p2], {
+          color: 'orange',
+          weight: 3,
+          dashArray: '5, 5'
+        }).addTo(map);
+      });
+
+    function calculatePolygonAngle(coords) {
+      const points = coords.map(toMeters);
+      let maxDist = 0;
+      let angleRad = 0;
+
+      for (let i = 0; i < points.length; i++) {
+        const a = points[i];
+        const b = points[(i + 1) % points.length];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > maxDist) {
+          maxDist = dist;
+          angleRad = Math.atan2(dy, dx); // ângulo do maior lado
+        }
+      }
+
+      let angleDeg = angleRad * 180 / Math.PI;
+      if (angleDeg < 0) angleDeg += 180; // ajusta para [0°, 180°]
+
+      return angleDeg;
+    }
+
+  </script>
+</body>
+
+</html>

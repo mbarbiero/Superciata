@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Polígono Alinhado a Pontos A e B</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicialização do mapa
+        const map = L.map('map').setView([-19.617356, -43.213439], 19);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Pontos de referência A e B (coordenadas fornecidas)
+        const pontoA = L.latLng(-19.6170418235, -43.2135045882);
+        const pontoB = L.latLng(-19.6176703333, -43.2133737778);
+        
+        // Marcadores para visualização
+        L.marker(pontoA).bindPopup("Ponto A").addTo(map);
+        L.marker(pontoB).bindPopup("Ponto B").addTo(map);
+        L.polyline([pontoA, pontoB], {color: 'red'}).addTo(map);
+
+        // Funções para conversão de metros para graus
+        function metersToLat(meters) {
+            return meters / 111320;
+        }
+
+        function metersToLng(meters, lat) {
+            return meters / (111320 * Math.cos(lat * Math.PI / 180));
+        }
+
+        // Função para calcular distância entre dois pontos em metros
+        function calcularDistancia(p1, p2) {
+            const R = 6371000; // Raio da Terra em metros
+            const lat1 = p1.lat * Math.PI/180;
+            const lat2 = p2.lat * Math.PI/180;
+            const deltaLat = (p2.lat - p1.lat) * Math.PI/180;
+            const deltaLng = (p2.lng - p1.lng) * Math.PI/180;
+
+            const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                      Math.cos(lat1) * Math.cos(lat2) *
+                      Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c;
+        }
+
+        // Função para calcular vértices do polígono com 15m de largura
+        function criarPoligonoAlinhado(larguraMetros) {
+            // 1. Calcular o ângulo da reta AB (em radianos)
+            const dx = pontoB.lng - pontoA.lng;
+            const dy = pontoB.lat - pontoA.lat;
+            const anguloRetaAB = Math.atan2(dy, dx);
+
+            // 2. Converter largura de metros para graus
+            const pontoMedio = L.latLng(
+                (pontoA.lat + pontoB.lat) / 2,
+                (pontoA.lng + pontoB.lng) / 2
+            );
+            
+            const larguraLat = metersToLat(larguraMetros/2); // Dividido por 2 para cada lado
+            const larguraLng = metersToLng(larguraMetros/2, pontoMedio.lat);
+
+            // 3. Calcular vetor perpendicular à linha AB
+            const perpX = -Math.sin(anguloRetaAB) * larguraLng;
+            const perpY = Math.cos(anguloRetaAB) * larguraLat;
+
+            // 4. Calcular os 4 vértices do retângulo
+            const vertices = [];
+            
+            // Ponto 1: A + perpendicular
+            vertices.push(L.latLng(
+                pontoA.lat + perpY,
+                pontoA.lng + perpX
+            ));
+            
+            // Ponto 2: B + perpendicular
+            vertices.push(L.latLng(
+                pontoB.lat + perpY,
+                pontoB.lng + perpX
+            ));
+            
+            // Ponto 3: B - perpendicular
+            vertices.push(L.latLng(
+                pontoB.lat - perpY,
+                pontoB.lng - perpX
+            ));
+            
+            // Ponto 4: A - perpendicular
+            vertices.push(L.latLng(
+                pontoA.lat - perpY,
+                pontoA.lng - perpX
+            ));
+
+            console.log(vertices);
+            return vertices;
+        }
+
+        // Calcular distância entre A e B em metros
+        const distanciaAB = calcularDistancia(pontoA, pontoB);
+        console.log('Distância entre A e B: ' + distanciaAB.toFixed(2) + ' metros');
+
+        // Criar polígono com 15 metros de largura
+        const poligono = L.polygon(criarPoligonoAlinhado(135), {
+            color: 'blue',
+            fillOpacity: 0.5,
+            weight: 2
+        }).addTo(map);
+
+        // Adicionar rótulo com a distância
+        poligono.bindPopup('Largura: 15m<br>Comprimento: ' + distanciaAB.toFixed(2) + 'm').openPopup();
+
+        // Centralizar o mapa no polígono
+        map.fitBounds(poligono.getBounds());
+
+        // Adicionar controle de escala em metros
+        L.control.scale({imperial: false}).addTo(map);
+    </script>
+</body>
+</html>

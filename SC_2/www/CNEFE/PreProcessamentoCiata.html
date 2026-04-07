@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Conversor CSV - UTF-8 com Ponto e Vírgula</title>
+</head>
+<body>
+  <h2>Conversor de CSV (.csv)</h2>
+  <input type="file" id="csvFile" accept=".csv" />
+  <button onclick="processCSV()">Converter e Baixar</button>
+
+  <script>
+    function removeAcentos(str) {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .replace(/ç/g, "c")
+        .replace(/Ç/g, "C")
+        .toUpperCase();
+    }
+
+    function processCSV() {
+      const fileInput = document.getElementById("csvFile");
+      if (!fileInput.files.length) {
+        alert("Selecione um arquivo CSV.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const content = e.target.result;
+        const linhas = content.split(/\r?\n/);
+
+        const linhasConvertidas = linhas.map(linha => {
+          return linha
+            .split(";")
+            .map(campo => removeAcentos(campo.trim()))
+            .join(";");
+        });
+
+        const novoConteudo = linhasConvertidas.join("\r\n");
+        downloadCSV(novoConteudo, "csv_convertido.csv");
+      };
+
+      reader.readAsText(file, "UTF-8");
+    }
+
+    function downloadCSV(conteudo, nomeArquivo) {
+      const blob = new Blob([conteudo], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", nomeArquivo);
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>

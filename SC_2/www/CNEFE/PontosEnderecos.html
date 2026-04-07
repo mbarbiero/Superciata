@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <meta charset="UTF-8">
+   <title>Endereços CNEFE - Pontos Únicos</title>
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+   <style>
+      #map {
+         height: 600px;
+         width: 100%;
+      }
+
+      .leaflet-container {
+         background: #f8f9fa;
+      }
+
+      #controls {
+         margin: 10px 0;
+         padding: 10px;
+         background: #f0f0f0;
+         border-radius: 5px;
+      }
+   </style>
+</head>
+
+<body>
+   <h1>Endereços CNEFE - Pontos Únicos</h1>
+   <div id="controls">
+      <label for="municipio">Código do Município:</label>
+      <input type="text" id="municipio" value="3131703" placeholder="Digite o COD_MUNICIPIO">
+      <button onclick="carregarDados()">Carregar Dados</button>
+   </div>
+   <div id="map"></div>
+
+   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+   <script>
+      const map = L.map('map', {
+         center: [-14.2350, -51.9253],
+         zoom: 4,
+         layers: []
+      });
+
+      const emptyBasemap = L.layerGroup([]).addTo(map);
+
+      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      });
+
+      const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+         maxZoom: 20,
+         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+         attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+      });
+
+      const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+         maxZoom: 20,
+         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+         attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+      });
+
+      const googleRoads = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+         maxZoom: 20,
+         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+         attribution: 'Imagens © <a href="https://www.google.com/maps">Google Maps</a>'
+      });
+
+      const mapTilerStreets = L.tileLayer('https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=hI0imr4ZU7FQ4XcOW5fm', {
+         attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+         maxZoom: 20
+      });
+
+      const mapTilerSatellite = L.tileLayer('https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=hI0imr4ZU7FQ4XcOW5fm', {
+         attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+         maxZoom: 20
+      });
+
+      const baseLayers = {
+         "Sem mapa base": emptyBasemap,
+         "OpenStreetMap": osmLayer,
+         "Google Maps": googleRoads,
+         "Google Satellite": googleSat,
+         "Google Hybrid": googleHybrid,
+         "MapTiler Streets": mapTilerStreets,
+         "MapTiler Satellite": mapTilerSatellite
+      };
+
+      L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
+
+      let pointsLayer = null;
+      let centroideLayer = null;
+
+      function carregarDados() {
+         const codMunicipio = document.getElementById('municipio').value.trim();
+
+         if (!codMunicipio) {
+            alert("Por favor, informe o Código do Município");
+            return;
+         }
+
+         if (pointsLayer) {
+            map.removeLayer(pointsLayer);
+            pointsLayer = null;
+         }
+
+         if (centroideLayer) {
+            map.removeLayer(centroideLayer);
+            centroideLayer = null;
+         }
+
+         const pontos = [];
+
+         const loadingControl = L.control({ position: 'topright' });
+         loadingControl.onAdd = function () {
+            this._div = L.DomUtil.create('div', 'loading-control');
+            this._div.innerHTML = '<div style="background: white; padding: 5px;">Carregando...</div>';
+            return this._div;
+         };
+         loadingControl.addTo(map);
+
+         fetch(`https://smuu.com.br/ciata/retPontosUnicosCnefe?COD_MUNICIPIO=${encodeURIComponent(codMunicipio)}`)
+            .then(response => {
+               if (!response.ok) {
+                  throw new Error('Erro na requisição');
+               }
+               return response.json();
+            })
+            .then(geojsonData => {
+               map.removeControl(loadingControl);
+
+               pointsLayer = L.geoJSON(geojsonData, {
+                  pointToLayer: (feature, latlng) => {
+                     pontos.push([latlng.lat, latlng.lng, feature.properties.num_quadra, feature.properties.num_face]); // X = lon, Y = lat
+                     return L.circleMarker(latlng, {
+                        radius: 3,
+                        fillColor: "#3388ff",
+                        color: "#000",
+                        weight: 0.5,
+                        opacity: 1,
+                        fillOpacity: 0.6
+                     });
+                  },
+                  onEachFeature: (feature, layer) => {
+                     const props = feature.properties;
+                     layer.bindPopup(
+                        `<b>${props.nom_logradouro}, ${props.num_endereco}</b><br>
+                        ${props.num_quadra}<br>
+                        Face: ${props.num_face}`
+                     );
+                  }
+               }).addTo(map);
+
+               if (geojsonData.features && geojsonData.features.length > 0) {
+                  map.fitBounds(pointsLayer.getBounds());
+               }
+
+               /*
+               Cria conjuntos de dados de uma face de uma quadra.
+               Calcula o centroide da face e o desenha no mapa.   
+               Os pontos já foram ordenados por quadra + face no SQL 
+               
+               let pontos_face = []; let ponto_face = pontos[0]; pontos_face.push(ponto_face);
+               let quadra = ponto_face[2]; let face = ponto_face[3];
+               for (let lin = 1; lin < pontos.length; lin++) {
+                  ponto_face = pontos[lin];
+                  if (quadra !== ponto_face[2] || face !== ponto_face[3]) {
+                     DesenhaCentroide(pontos_face);
+                     quadra = ponto_face[2]; face = ponto_face[3];
+                     pontos_face = []
+                  }
+                  pontos_face.push(ponto_face);
+               }
+               DesenhaCentroide(pontos_face);
+               */
+            })
+            .catch(error => {
+               map.removeControl(loadingControl);
+               console.error("Erro ao carregar GeoJSON:", error);
+               alert("Falha ao carregar dados do servidor. Verifique o código do município.");
+            });
+      }
+
+      // haversine é usada para calcular a distância entre dois pontos na superfície de uma esfera, dados os pares de latitude e longitude
+      function haversine(coord1, coord2) {
+         const R = 6371000; // Raio da Terra em m
+         const toRad = deg => deg * Math.PI / 180;
+
+         const dLat = toRad(coord2[0] - coord1[0]);
+         const dLng = toRad(coord2[1] - coord1[1]);
+
+         const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(coord1[0])) * Math.cos(toRad(coord2[0])) *
+            Math.sin(dLng / 2) ** 2;
+         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+         return (R * c);
+      }
+
+      // função para calcular o centróide
+      function CalculaCentroide(coords) {  // coords deve ser [lat,lon,...]
+
+         let somaLat = 0;
+         let somaLon = 0;
+         for (let lin = 0; lin < coords.length; lin++) {
+            somaLat += coords[lin][0];
+            somaLon += coords[lin][1];
+         }
+         //console.log(somaLat, somaLon);
+         const centroide = [somaLat / coords.length, somaLon / coords.length];
+
+         return (centroide);
+      }
+
+      /*
+      Função que desenha um ponto central de um conjunto de coordenadas no map 
+      > coords é uma matriz no formato [[lat, lon, ...]]
+      > multiplicador é usado para eliminar outliers (multiplicador * desvio padrão)
+      */
+      function DesenhaCentroide(coords, multiplicador = 2) {
+         // centroide preliminar
+         const centroidePre = CalculaCentroide(coords);
+         let pontosFiltrados = coords;
+
+         if (multiplicador > 0) {
+            // distâncias de cada ponto ao centroide preliminar
+            const distancias = coords.map(pt =>
+               haversine(centroidePre, [pt[0], pt[1]])
+            );
+            // calcular média e desvio padrão
+            const media = distancias.reduce((a, b) => a + b, 0) / distancias.length;
+            const desvio = Math.sqrt(distancias.reduce((acc, d) => acc + Math.pow(d - media, 2), 0) / distancias.length);
+            const limite = media + multiplicador * desvio;
+
+            // filtrar os pontos que estão dentro do limite
+            pontosFiltrados = coords.filter((pt, i) => distancias[i] <= limite);
+         }
+
+         // Calcular o centróide final
+         const centroideFinal = CalculaCentroide(pontosFiltrados);
+
+         // console.log(centroideFinal);
+
+         L.circleMarker(centroideFinal, {
+            radius: 5,
+            fillColor: "#00ff00",
+            color: "#000",
+            weight: 0.5,
+            opacity: 1,
+            fillOpacity: 0.6
+         })
+         .addTo(map)
+         .bindPopup(`${centroideFinal}`);
+
+         return (centroideFinal);
+      }
+
+
+   </script>
+</body>
+
+</html>
