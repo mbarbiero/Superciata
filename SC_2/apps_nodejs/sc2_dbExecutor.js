@@ -5,9 +5,9 @@ const config = require('./sc2_config');
 
 function splitComandosSQL(sql) {
     // LOG DE DEPURAÇÃO 1
-    console.log("--- DEBUG SPLIT ---");
-    console.log("Tipo recebido:", typeof sql);
-    console.log("Conteúdo recebido:", sql);
+    //console.log("--- DEBUG SPLIT ---");
+    //console.log("Tipo recebido:", typeof sql);
+    //console.log("Conteúdo recebido:", sql);
 
     if (typeof sql !== 'string') {
         console.error("❌ ERRO CRÍTICO: splitComandosSQL recebeu algo que não é string!");
@@ -45,10 +45,10 @@ function parseSQL(sql) {
 }
 
 async function executa_sql(sqlContent, nomeProcedimento = 'SC2_Direto') {
-    console.log(`[LOG] Iniciando executa_sql (${nomeProcedimento})`);
+    //console.log(`[LOG] Iniciando executa_sql (${nomeProcedimento})`);
     
     // LOG DE DEPURAÇÃO 2
-    console.log("DEBUG: Conteúdo original em executa_sql:", typeof sqlContent);
+    //console.log("DEBUG: Conteúdo original em executa_sql:", typeof sqlContent);
 
     // Se o Express enviou o objeto body inteiro em vez de só o texto
     let sqlFinal = sqlContent;
@@ -64,7 +64,7 @@ async function executa_arquivo_sql(nomeArquivo, valores = {}, nomeProcedimento =
     console.log(`Arquivo em dbExecutor: ${nomeArquivo}`);
     const fullPath = path.isAbsolute(nomeArquivo) ? nomeArquivo : path.join(config.paths.sqlFolder, nomeArquivo);
 
-    console.log(`[LOG] Lendo arquivo: ${fullPath}`);
+    //console.log(`[LOG] Lendo arquivo: ${fullPath}`);
     if (!fs.existsSync(fullPath)) throw new Error(`Arquivo não encontrado: ${fullPath}`);
 
     let sqlContent = fs.readFileSync(fullPath, 'utf8');
@@ -77,7 +77,7 @@ async function processar_execucao(sqlContent, nomeProcedimento) {
     let connection;
     try {
         // LOG DE DEPURAÇÃO 3
-        console.log("DEBUG: processar_execucao recebeu:", typeof sqlContent);
+        //console.log("DEBUG: processar_execucao recebeu:", typeof sqlContent);
 
         connection = await mysql.createConnection({
             ...config.db,
@@ -86,7 +86,7 @@ async function processar_execucao(sqlContent, nomeProcedimento) {
             infileStreamFactory: (filePath) => fs.createReadStream(filePath)
         });
 
-        await connection.beginTransaction();
+        //await connection.beginTransaction();
 
         // O erro acontece aqui se sqlContent não for string
         const comandos = splitComandosSQL(sqlContent);
@@ -94,6 +94,8 @@ async function processar_execucao(sqlContent, nomeProcedimento) {
         const resumoFinal = [];
         for (let i = 0; i < comandos.length; i++) {
             const sql = comandos[i];
+            console.log(sql);
+            console.log('-------------------------');           
             const info = parseSQL(sql);
             const start = Date.now();
             const [result] = await connection.query(sql);
@@ -102,14 +104,14 @@ async function processar_execucao(sqlContent, nomeProcedimento) {
             resumoFinal.push({ passo: i + 1, ...info, registros, duration });
         }
 
-        await connection.commit();
+        //await connection.commit();
         return { sucesso: true, detalhes: resumoFinal };
     } catch (err) {
-        if (connection) await connection.rollback();
+        //if (connection) await connection.rollback();
         console.error("❌ Erro em processar_execucao:", err.message);
         throw err;
     } finally {
-        if (connection) await connection.end();
+        //if (connection) await connection.end();
     }
 }
 

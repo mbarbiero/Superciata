@@ -389,13 +389,32 @@
                 bloquearBotoes(false);
             }
         }
-        async function processarBase(tipo) {
+        async function processarBase(dominio) {
             if (!projetoAtual.codigo) { addMensagem("⚠️ Selecione o município.", "erro"); return; }
 
             bloquearBotoes(true);
-            cod_municipio: 
-            await executarScriptSQL('CN_PreencheTabelas.sql', {'cod_municipio': projetoAtual.codigo}, `⚙️ Iniciando processamento de ${tipo.toUpperCase()}...`);
+            dominio = dominio.toLowerCase();
+            if (dominio === 'cnefe') {
+                await executarScriptSQL('CN_PreencheTabelas.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Iniciando processamento de ${dominio}...`);
+            } else if (dominio === 'ciata') {
+                preencheTabelasCI();
+            }
             bloquearBotoes(false);
+        }
+
+        async function preencheTabelasCI() {
+            await executarScriptSQL('CI_LOGRADOUROS_Preenche.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Iniciando processamento de CI_LOGRADOUROS...`);
+            await normaliza_CI_LOGRADOUROS(projetoAtual.codigo);
+            await executarScriptSQL('CI_PreencheTabelas.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Complementando dados em CI_LOGRADOUROS...`);
+        }
+
+        async function normaliza_CI_LOGRADOUROS(cod_municipio) {
+            addMensagem("Normalizando CI_LOGRADOUROS...");
+            resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+                method: "GET"
+            });
+            resultado = await resposta.json();
+            addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
         }
 
         async function registrarNoBanco(tipo, totalLinhas) {
