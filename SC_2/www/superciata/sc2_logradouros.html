@@ -134,8 +134,13 @@
             font-size: 0.8rem;
         }
 
-        .btn-link { background-color: var(--success); }
-        .btn-link:disabled { background-color: #ccc; }
+        .btn-link {
+            background-color: var(--success);
+        }
+
+        .btn-link:disabled {
+            background-color: #ccc;
+        }
 
         #console-mensagens {
             margin-top: 20px;
@@ -155,6 +160,30 @@
             margin-bottom: 10px;
             font-weight: bold;
         }
+
+        /* Estilo para itens já vinculados */
+        .lista-itens li.vinculado {
+            background: #e8f5e9;
+            /* Verde bem claro */
+            color: #2e7d32;
+            border-left: 4px solid var(--success);
+            cursor: default;
+        }
+
+        .btn-desvincular {
+            background-color: var(--error);
+        }
+
+        .btn-novo {
+            background-color: var(--info);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 
@@ -164,12 +193,13 @@
         <div class="card">
             <h2>Fase 1: Ajuste Manual de Logradouros</h2>
             <div id="info-municipio" class="info-projeto">📍 Município: Carregando...</div>
-            
+
             <div class="grid-ajuste">
                 <div class="lista-container">
                     <div class="lista-header">LOGRADOUROS SEM ID (CIATA)</div>
                     <div class="busca-box">
-                        <input type="text" id="busca-esquerda" placeholder="Filtrar pendentes..." onkeyup="filtrar('esquerda')">
+                        <input type="text" id="busca-esquerda" placeholder="Filtrar pendentes..."
+                            onkeyup="filtrar('esquerda')">
                     </div>
                     <ul id="lista-esquerda" class="lista-itens"></ul>
                 </div>
@@ -177,7 +207,8 @@
                 <div class="lista-container">
                     <div class="lista-header">LOGRADOUROS DISPONÍVEIS (CNEFE/BASE)</div>
                     <div class="busca-box">
-                        <input type="text" id="busca-direita" placeholder="Buscar correspondência..." onkeyup="filtrar('direita')">
+                        <input type="text" id="busca-direita" placeholder="Buscar correspondência..."
+                            onkeyup="filtrar('direita')">
                     </div>
                     <ul id="lista-direita" class="lista-itens"></ul>
                 </div>
@@ -185,7 +216,13 @@
 
             <div class="actions">
                 <button id="btn-vincular" class="btn btn-link" disabled onclick="vincularLogradouros()">
-                    Vincular Selecionados
+                    Vincular
+                </button>
+                <button id="btn-desvincular" class="btn btn-desvincular" disabled onclick="desvincularLogradouro()">
+                    Desvincular
+                </button>
+                <button class="btn btn-novo" onclick="incluirNovoLogradouro()">
+                    + Novo Logradouro
                 </button>
             </div>
         </div>
@@ -210,19 +247,29 @@
         };
 
         async function carregarDados() {
-            addMensagem(`🔍 Buscando logradouros para ${projetoAtual.nome}...`);
-            
-            // Query 1: Logradouros do CIATA que estão nulos ou vazios no SC_ID_LOGRADOURO
-            const sqlPendentes = `SELECT DISTINCT CI_NOM_LOGRADOURO_NORM FROM CI_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' AND (SC_ID_LOGRADOURO IS NULL OR SC_ID_LOGRADOURO = '') ORDER BY CI_NOM_LOGRADOURO_NORM`;
-            
-            // Query 2: Todos os nomes normalizados disponíveis na base de referência (CNEFE/CN_)
-            const sqlDisponiveis = `SELECT DISTINCT CN_NOM_LOGRADOURO_NORM FROM CN_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' ORDER BY CN_NOM_LOGRADOURO_NORM`;
+            addMensagem(`🔍 Filtrando logradouros pendentes em ${projetoAtual.nome}...`);
+
+            // Lista da Esquerda: Apenas pendentes
+            const sqlPendentes = `
+        SELECT DISTINCT CI_NOM_LOGRADOURO_NORM 
+        FROM CI_LOGRADOUROS 
+        WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' 
+          AND (SC_ID_LOGRADOURO IS NULL OR SC_ID_LOGRADOURO = '') 
+        ORDER BY CI_NOM_LOGRADOURO_NORM`;
+
+            // Lista da Direita: NOM_LOGRADOURO (ou a coluna que você definiu como padrão)
+            const sqlReferencia = `
+        SELECT DISTINCT NOM_LOGRADOURO 
+        FROM CN_LOGRADOUROS 
+        WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' 
+        ORDER BY NOM_LOGRADOURO`;
 
             const pendentes = await buscarSQL(sqlPendentes);
-            const disponiveis = await buscarSQL(sqlDisponiveis);
+            const referencia = await buscarSQL(sqlReferencia);
 
-            popularLista('lista-esquerda', pendentes, 'CI_NOM_LOGRADOURO_NORM');
-            popularLista('lista-direita', disponiveis, 'CN_NOM_LOGRADOURO_NORM');
+            // IMPORTANTE: O terceiro parâmetro deve ser IGUAL ao nome da coluna no SELECT
+            popularListaEsquerda(pendentes);
+            popularLista('lista-direita', referencia, 'NOM_LOGRADOURO');
         }
 
         async function buscarSQL(sql) {
@@ -232,9 +279,18 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tipo: 'direto', sql: sql })
                 });
-                const data = await res.json();
-                return data.sucesso ? data.dados : [];
-            } catch (e) { return []; }
+
+                const result = await res.json();
+
+                if (result.sucesso) {
+                    // Acessa a nova propriedade 'dados' que criamos no dbExecutor.js
+                    return result.dados || [];
+                }
+                return [];
+            } catch (err) {
+                console.error("Erro na requisição:", err);
+                return [];
+            }
         }
 
         function popularLista(id, dados, campo) {
@@ -248,22 +304,61 @@
             });
         }
 
-        function selecionar(idLista, elemento) {
+        function popularListaEsquerda(dados) {
+            const ul = document.getElementById('lista-esquerda');
+            ul.innerHTML = '';
+
+            if (dados.length === 0) {
+                addMensagem("✅ Nenhum logradouro pendente encontrado!", "ok");
+                ul.innerHTML = '<li style="color: var(--success); text-align: center;">Tudo processado!</li>';
+                return;
+            }
+
+            dados.forEach(d => {
+                const li = document.createElement('li');
+                li.innerText = d.CI_NOM_LOGRADOURO_NORM;
+
+                // Como a query só trouxe nulos, nenhum aqui está vinculado ainda
+                li.onclick = () => selecionar('lista-esquerda', li, false);
+                ul.appendChild(li);
+            });
+        }
+
+        let estaVinculado = false;
+
+        function selecionar(idLista, elemento, jaTemVinculo = false) {
             const itens = document.querySelectorAll(`#${idLista} li`);
             itens.forEach(i => i.classList.remove('selecionado'));
             elemento.classList.add('selecionado');
 
-            if (idLista === 'lista-esquerda') itemEsquerda = elemento.innerText;
+            if (idLista === 'lista-esquerda') {
+                itemEsquerda = elemento.innerText;
+                estaVinculado = jaTemVinculo;
+            }
             if (idLista === 'lista-direita') itemDireita = elemento.innerText;
 
-            document.getElementById('btn-vincular').disabled = !(itemEsquerda && itemDireita);
+            // Habilita Vincular apenas se o da esquerda for novo e o da direita estiver selecionado
+            document.getElementById('btn-vincular').disabled = !(itemEsquerda && itemDireita && !estaVinculado);
+
+            // Habilita Desvincular apenas se o da esquerda já tiver vínculo
+            document.getElementById('btn-desvincular').disabled = !estaVinculado;
+        }
+
+        async function desvincularLogradouro() {
+            if (!confirm(`Deseja remover o vínculo de "${itemEsquerda}"?`)) return;
+
+            const sqlUpdate = `UPDATE CI_LOGRADOUROS SET SC_ID_LOGRADOURO = NULL WHERE CI_NOM_LOGRADOURO_NORM = '${itemEsquerda}' AND COD_MUNICIPIO = '${projetoAtual.codigo}'`;
+            await buscarSQL(sqlUpdate);
+
+            addMensagem(`🔓 Logradouro "${itemEsquerda}" desvinculado.`, "ok");
+            carregarDados();
         }
 
         async function vincularLogradouros() {
             if (!confirm(`Deseja associar "${itemEsquerda}" a "${itemDireita}"?`)) return;
 
             addMensagem(`🔗 Vinculando: ${itemEsquerda} ➔ ${itemDireita}...`);
-            
+
             // Aqui buscamos o ID original da base de referência para aplicar no CIATA
             const sqlUpdate = `
                 UPDATE CI_LOGRADOUROS 
@@ -272,11 +367,27 @@
 
             const res = await buscarSQL(sqlUpdate);
             addMensagem(`✅ Vinculação concluída no banco.`, "ok");
-            
+
             // Reset e Recarregar
             itemEsquerda = null;
             itemDireita = null;
             document.getElementById('btn-vincular').disabled = true;
+            carregarDados();
+        }
+
+        async function incluirNovoLogradouro() {
+            const novoNome = prompt("Digite o nome do NOVO logradouro (será normalizado automaticamente):");
+            if (!novoNome) return;
+
+            // Normalização via JS para garantir o padrão SuperCIATA
+            const nomeNorm = novoNome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").trim();
+
+            addMensagem(`➕ Incluindo novo logradouro: ${nomeNorm}...`);
+
+            const sqlInsert = `INSERT INTO CI_LOGRADOUROS (COD_MUNICIPIO, CI_NOM_LOGRADOURO, CI_NOM_LOGRADOURO_NORM) VALUES ('${projetoAtual.codigo}', '${novoNome.toUpperCase()}', '${nomeNorm}')`;
+
+            await buscarSQL(sqlInsert);
+            addMensagem(`✅ "${nomeNorm}" incluído com sucesso.`, "ok");
             carregarDados();
         }
 
@@ -302,4 +413,5 @@
         }
     </script>
 </body>
+
 </html>
