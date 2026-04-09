@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SuperCIATA - Espacialização</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --info: #2980b9;
+            --warning: #f39c12;
+            --bg: #f4f7f6;
+            --terminal: #1a1a1a;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid var(--success);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+            background: white;
+        }
+
+        .upload-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fafafa;
+            text-align: center;
+        }
+
+        .report {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            background: #fff;
+            border: 1px solid #eee;
+            display: none;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        .valid {
+            border-left: 5px solid var(--success);
+        }
+
+        .invalid {
+            border-left: 5px solid var(--error);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+            color: white;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .btn-load {
+            background-color: var(--info);
+        }
+
+        .btn-process {
+            background-color: var(--warning);
+        }
+
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #console-mensagens {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--terminal);
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            border-radius: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        .msg-erro {
+            color: #ff5555;
+        }
+
+        .msg-ok {
+            color: #55ff55;
+        }
+
+        .msg-sql {
+            color: #f1c40f;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h2>SuperCIATA - Espacialização</h2>
+            <div class="grid">
+                <div>
+                    <label>Estado (UF)</label>
+                    <select id="uf" onchange="atualizarMunicipios()"></select>
+                </div>
+                <div>
+                    <label>Município Alvo (CTU/CIATA)</label>
+                    <select id="municipio" onchange="salvarProjeto()"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card upload-zone">
+                <h3>Base CNEFE (IBGE)</h3>
+                <input type="file" id="input-cnefe" accept=".zip">
+                <div id="report-cnefe" class="report"></div>
+                <button id="btn-load-cnefe" class="btn btn-load" onclick="fluxoIntegrado('cnefe')">Carregar ZIP</button>
+                <button id="btn-proc-cnefe" class="btn btn-process" onclick="processarBase('cnefe')">Processar
+                    CNEFE</button>
+            </div>
+
+            <div class="card upload-zone">
+                <h3>Base CTU / CIATA</h3>
+                <input type="file" id="input-ciata" accept=".zip">
+                <div id="report-ciata" class="report"></div>
+                <button id="btn-load-ciata" class="btn btn-load" onclick="fluxoIntegrado('ciata')">Carregar ZIP</button>
+                <button id="btn-proc-ciata" class="btn btn-process" onclick="processarBase('ciata')">Processar
+                    CIATA</button>
+            </div>
+        </div>
+
+        <div id="console-mensagens">
+            > Sistema SuperCIATA 2.0 pronto. Aguardando projeto...
+        </div>
+    </div>
+
+    <script>
+        let dadosMunicipios = {};
+        let projetoAtual = { codigo: null, nome: null, uf: null };
+
+
+        const REQUISITOS = {
+            cnefe: ["COD_UNICO_ENDERECO", "COD_UF", "COD_MUNICIPIO", "COD_DISTRITO", "COD_SUBDISTRITO", "COD_SETOR"],
+            ciata: ["COD_MUNICIPIO", "COD_UNICO_ENDERECO", "ID_QUADRA", "NOM_LOGRADOURO"]
+        };
+
+        window.onload = async () => {
+            try {
+                const res = await fetch('arquivos/municipios.json');
+                dadosMunicipios = await res.json();
+                popularUFs();
+                carregarProjetoSalvo();
+            } catch (e) { addMensagem("ERRO: municipios.json não encontrado.", "erro"); }
+        };
+
+        function popularUFs() {
+            const selUf = document.getElementById('uf');
+            selUf.innerHTML = '<option value="">UF</option>';
+            Object.keys(dadosMunicipios).sort().forEach(uf => selUf.add(new Option(uf, uf)));
+        }
+
+        function atualizarMunicipios(callback) {
+            const uf = document.getElementById('uf').value;
+            const selMun = document.getElementById('municipio');
+            selMun.innerHTML = '<option value="">Selecione...</option>';
+            if (uf && dadosMunicipios[uf]) {
+                dadosMunicipios[uf].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(m => selMun.add(new Option(m.nome, m.codigo)));
+                if (callback) callback();
+            }
+        }
+
+        function salvarProjeto() {
+            const selUf = document.getElementById('uf');
+            const selMun = document.getElementById('municipio');
+            if (!selMun.value) return;
+            projetoAtual = { uf: selUf.value, codigo: selMun.value, nome: selMun.options[selMun.selectedIndex].text };
+            localStorage.setItem('sc2_projeto', JSON.stringify(projetoAtual));
+            addMensagem(`📍 Município selecionado: ${projetoAtual.nome} (${projetoAtual.codigo})`, "ok");
+            SC_CriaTabelas();
+        }
+
+        function carregarProjetoSalvo() {
+            const salvo = localStorage.getItem('sc2_projeto');
+            if (salvo) {
+                const temp = JSON.parse(salvo);
+                document.getElementById('uf').value = temp.uf;
+                atualizarMunicipios(() => {
+                    document.getElementById('municipio').value = temp.codigo;
+                    projetoAtual = temp;
+                    addMensagem(`♻️ Projeto recuperado: ${projetoAtual.nome}`, "ok");
+                });
+            }
+        }
+
+        // Função Genérica para chamada de arquivos SQL
+        async function executarScriptSQL(arquivo, params = '', msgInicial = '') {
+            if (msgInicial) addMensagem(msgInicial, "sql");
+            try {
+                console.log('executarScriptSQL');
+                const res = await fetch('https://superciata.smuu.com.br:21079/sc2_/executa_sql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tipo: 'arquivo',
+                        arquivo: arquivo,
+                        parametros: params
+                    })
+                });
+                const result = await res.json();
+                if (result.sucesso) {
+                    addMensagem(`📡 SQL [${arquivo}] executado com sucesso.`, "ok");
+                    return true;
+                }
+            } catch (err) {
+                addMensagem(`⚠️ Erro SQL [${arquivo}]: ${err.message}`, "erro");
+                return false;
+            }
+        }
+
+        async function SC_CriaTabelas() {
+            await executarScriptSQL('SC_CriaTabelas.sql', '', '🗄️ Criando domínio SC_...');
+            await executarScriptSQL('CN_CriaTabelas.sql', '', '🗄️ Criando domínio CN_...');
+            await executarScriptSQL('CI_CriaTabelas.sql', '', '🗄️ Criando domínio CI_...');
+            await executarScriptSQL('OSM_CriaTabelas.sql', '', '🗄️ Criando domínio OSM_...');
+        }
+
+        /**
+        * Fluxo Principal: Validação Local -> Upload -> Registro de Log
+        * @param {string} tipo - 'ciata' ou 'cnefe'
+        */
+        async function fluxoIntegrado(tipo) {
+            const input = document.getElementById(`input-${tipo}`);
+            const report = document.getElementById(`report-${tipo}`);
+            const arquivoZip = input.files[0];
+
+            // 1. Validações Iniciais
+            if (!projetoAtual.codigo) {
+                addMensagem("⚠️ Erro: Selecione o município alvo antes de carregar.", "erro");
+                return;
+            }
+            if (!arquivoZip) {
+                addMensagem(`⚠️ Erro: Selecione o arquivo ZIP do ${tipo.toUpperCase()}.`, "erro");
+                return;
+            }
+
+            try {
+                bloquearBotoes(true);
+                addMensagem(`🔍 Analisando pacote ${tipo.toUpperCase()}...`, "info");
+
+                // 2. Leitura do ZIP para validar conteúdo e extrair nome do CSV
+                const zip = await JSZip.loadAsync(arquivoZip);
+                const arquivosNoZip = Object.values(zip.files).filter(f => !f.dir);
+
+                // Regra: Deve conter apenas 1 arquivo e deve ser CSV
+                if (arquivosNoZip.length !== 1) {
+                    throw new Error(`O ZIP deve conter apenas 1 arquivo. Encontrados: ${arquivosNoZip.length}`);
+                }
+
+                const csvEntry = arquivosNoZip[0];
+                const nomeArquivoCSV = csvEntry.name;
+
+                if (!nomeArquivoCSV.toLowerCase().endsWith('.csv')) {
+                    throw new Error(`O arquivo interno deve ser .csv (Encontrado: ${nomeArquivoCSV})`);
+                }
+
+                // 3. Validação de Estrutura e Dados (Município)
+                const conteudo = await csvEntry.async("string");
+                const linhas = conteudo.split(/\r?\n/).filter(l => l.trim() !== "");
+                if (linhas.length < 2) throw new Error("O arquivo CSV está vazio ou sem dados.");
+
+                const cabecalho = linhas[0].split(/[;,]/).map(c => c.trim().toUpperCase());
+                const faltantes = REQUISITOS[tipo].filter(c => !cabecalho.includes(c));
+
+                if (faltantes.length > 0) {
+                    throw new Error(`Colunas obrigatórias ausentes: ${faltantes.join(", ")}`);
+                }
+
+                // Valida se o código do município na primeira linha de dados coincide com o projeto
+                const idxMun = cabecalho.indexOf("COD_MUNICIPIO");
+                const codigoNoCSV = linhas[1].split(/[;,]/)[idxMun]?.trim();
+
+                if (codigoNoCSV !== projetoAtual.codigo) {
+                    throw new Error(`Município divergente! CSV indica [${codigoNoCSV}], mas o projeto é [${projetoAtual.codigo}].`);
+                }
+
+                // 4. Upload para o Servidor com Parâmetros Adicionais
+                addMensagem(`📤 Enviando ${nomeArquivoCSV} para processamento...`, "info");
+
+                const formData = new FormData();
+                formData.append("arqZip", arquivoZip);
+                formData.append("tipo", tipo);
+                formData.append("nome_csv", nomeArquivoCSV); // Passa o nome do arquivo interno
+                formData.append("municipio_cod", projetoAtual.codigo);
+
+                const resUpload = await fetch('https://superciata.smuu.com.br:21079/superciata/carrega_arqZip', {
+                    method: "POST",
+                    body: formData
+                });
+
+                const resultUpload = await resUpload.json();
+
+                if (!resultUpload.sucesso) {
+                    throw new Error(resultUpload.mensagem || "Erro no upload.");
+                }
+
+                addMensagem(`✅ Upload concluído com sucesso.`, "ok");
+
+                // 5. Registro de Log no MariaDB via SQL Direto
+                // Passamos o total de linhas (subtraindo o cabeçalho)
+                await registrarNoBanco(tipo, linhas.length - 1);
+
+                // Atualização Visual do Card
+                report.className = "report valid";
+                report.style.display = "block";
+                report.innerHTML = `<b>✔ Sincronizado</b><br>Arquivo: ${nomeArquivoCSV}<br>Registros: ${linhas.length - 1}`;
+
+            } catch (e) {
+                addMensagem(`❌ Falha no Fluxo: ${e.message}`, "erro");
+                report.className = "report invalid";
+                report.style.display = "block";
+                report.innerHTML = `<b>✖ Erro na Validação</b><br>${e.message}`;
+            } finally {
+                bloquearBotoes(false);
+            }
+        }
+        async function processarBase(dominio) {
+            if (!projetoAtual.codigo) { addMensagem("⚠️ Selecione o município.", "erro"); return; }
+
+            bloquearBotoes(true);
+            dominio = dominio.toLowerCase();
+            if (dominio === 'cnefe') {
+                await executarScriptSQL('CN_PreencheTabelas.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Iniciando processamento de ${dominio}...`);
+            } else if (dominio === 'ciata') {
+                preencheTabelasCI();
+            }
+            bloquearBotoes(false);
+        }
+
+        async function preencheTabelasCI() {
+            await executarScriptSQL('CI_LOGRADOUROS_Preenche.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Iniciando processamento de CI_LOGRADOUROS...`);
+            await normaliza_CI_LOGRADOUROS(projetoAtual.codigo);
+            await executarScriptSQL('CI_PreencheTabelas.sql', { 'cod_municipio': projetoAtual.codigo }, `⚙️ Complementando dados em CI_LOGRADOUROS...`);
+        }
+
+        async function normaliza_CI_LOGRADOUROS(cod_municipio) {
+            addMensagem("Normalizando CI_LOGRADOUROS...");
+            resposta = await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`, {
+                method: "GET"
+            });
+            resultado = await resposta.json();
+            addMensagem("Resultado normalização: " + JSON.stringify(resultado, null, 2));
+        }
+
+        async function registrarNoBanco(tipo, totalLinhas) {
+            const sqlQuery = `INSERT INTO SC_LOG (COD_MUNICIPIO, NOM_MUNICIPIO, TP_ARQUIVO, QT_REGISTROS, DT_IMPORTACAO) 
+                              VALUES ('${projetoAtual.codigo}', '${projetoAtual.nome}', '${tipo.toUpperCase()}', ${totalLinhas}, NOW());`;
+
+            try {
+                const res = await fetch('https://superciata.smuu.com.br:21079/sc2_/executa_sql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo: 'direto', sql: sqlQuery })
+                });
+                const result = await res.json();
+                if (result.sucesso) addMensagem(`📡 Log registrado no banco.`, "ok");
+            } catch (err) {
+                addMensagem(`⚠️ Erro no Log: ${err.message}`, "erro");
+            }
+        }
+
+        function addMensagem(texto, tipo) {
+            const consoleEl = document.getElementById("console-mensagens");
+            const div = document.createElement("div");
+            div.className = tipo === "erro" ? "msg-erro" : tipo === "ok" ? "msg-ok" : tipo === "sql" ? "msg-sql" : "";
+            div.innerText = `> ${texto}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function bloquearBotoes(status) {
+            const ids = ["btn-load-cnefe", "btn-proc-cnefe", "btn-load-ciata", "btn-proc-ciata"];
+            ids.forEach(id => document.getElementById(id).disabled = status);
+        }
+    </script>
+
+</body>
+
+</html>

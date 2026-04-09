@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SuperCIATA - Ajuste Manual de Logradouros</title>
+    <style>
+        /* HERANÇA VISUAL DO SUPERCIATA */
+        :root {
+            --primary: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --info: #2980b9;
+            --warning: #f39c12;
+            --bg: #f4f7f6;
+            --terminal: #1a1a1a;
+            --selected: #d1ecf1;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid var(--warning);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.2rem;
+        }
+
+        /* GRID DE AJUSTE */
+        .grid-ajuste {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .lista-container {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .lista-header {
+            background: var(--primary);
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .busca-box {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .busca-box input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .lista-itens {
+            flex-grow: 1;
+            overflow-y: auto;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .lista-itens li {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .lista-itens li:hover {
+            background: #f8f9fa;
+        }
+
+        .lista-itens li.selecionado {
+            background: var(--selected);
+            border-left: 4px solid var(--info);
+            font-weight: bold;
+        }
+
+        /* BARRA DE AÇÕES */
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            color: white;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .btn-link { background-color: var(--success); }
+        .btn-link:disabled { background-color: #ccc; }
+
+        #console-mensagens {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--terminal);
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            border-radius: 6px;
+            height: 120px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .info-projeto {
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h2>Fase 1: Ajuste Manual de Logradouros</h2>
+            <div id="info-municipio" class="info-projeto">📍 Município: Carregando...</div>
+            
+            <div class="grid-ajuste">
+                <div class="lista-container">
+                    <div class="lista-header">LOGRADOUROS SEM ID (CIATA)</div>
+                    <div class="busca-box">
+                        <input type="text" id="busca-esquerda" placeholder="Filtrar pendentes..." onkeyup="filtrar('esquerda')">
+                    </div>
+                    <ul id="lista-esquerda" class="lista-itens"></ul>
+                </div>
+
+                <div class="lista-container">
+                    <div class="lista-header">LOGRADOUROS DISPONÍVEIS (CNEFE/BASE)</div>
+                    <div class="busca-box">
+                        <input type="text" id="busca-direita" placeholder="Buscar correspondência..." onkeyup="filtrar('direita')">
+                    </div>
+                    <ul id="lista-direita" class="lista-itens"></ul>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="btn-vincular" class="btn btn-link" disabled onclick="vincularLogradouros()">
+                    Vincular Selecionados
+                </button>
+            </div>
+        </div>
+
+        <div id="console-mensagens">
+            > Aguardando seleção de logradouros para ajuste...
+        </div>
+    </div>
+
+    <script>
+        let projetoAtual = JSON.parse(localStorage.getItem('sc2_projeto')) || {};
+        let itemEsquerda = null;
+        let itemDireita = null;
+
+        window.onload = () => {
+            if (!projetoAtual.codigo) {
+                addMensagem("⚠️ Nenhum projeto ativo encontrado. Volte ao início.", "erro");
+                return;
+            }
+            document.getElementById('info-municipio').innerText = `📍 Município Alvo: ${projetoAtual.nome} (${projetoAtual.codigo})`;
+            carregarDados();
+        };
+
+        async function carregarDados() {
+            addMensagem(`🔍 Buscando logradouros para ${projetoAtual.nome}...`);
+            
+            // Query 1: Logradouros do CIATA que estão nulos ou vazios no SC_ID_LOGRADOURO
+            const sqlPendentes = `SELECT DISTINCT CI_NOM_LOGRADOURO_NORM FROM CI_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' AND (SC_ID_LOGRADOURO IS NULL OR SC_ID_LOGRADOURO = '') ORDER BY CI_NOM_LOGRADOURO_NORM`;
+            
+            // Query 2: Todos os nomes normalizados disponíveis na base de referência (CNEFE/CN_)
+            const sqlDisponiveis = `SELECT DISTINCT CN_NOM_LOGRADOURO_NORM FROM CN_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' ORDER BY CN_NOM_LOGRADOURO_NORM`;
+
+            const pendentes = await buscarSQL(sqlPendentes);
+            const disponiveis = await buscarSQL(sqlDisponiveis);
+
+            popularLista('lista-esquerda', pendentes, 'CI_NOM_LOGRADOURO_NORM');
+            popularLista('lista-direita', disponiveis, 'CN_NOM_LOGRADOURO_NORM');
+        }
+
+        async function buscarSQL(sql) {
+            try {
+                const res = await fetch('https://superciata.smuu.com.br:21079/sc2_/executa_sql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo: 'direto', sql: sql })
+                });
+                const data = await res.json();
+                return data.sucesso ? data.dados : [];
+            } catch (e) { return []; }
+        }
+
+        function popularLista(id, dados, campo) {
+            const ul = document.getElementById(id);
+            ul.innerHTML = '';
+            dados.forEach(d => {
+                const li = document.createElement('li');
+                li.innerText = d[campo];
+                li.onclick = () => selecionar(id, li);
+                ul.appendChild(li);
+            });
+        }
+
+        function selecionar(idLista, elemento) {
+            const itens = document.querySelectorAll(`#${idLista} li`);
+            itens.forEach(i => i.classList.remove('selecionado'));
+            elemento.classList.add('selecionado');
+
+            if (idLista === 'lista-esquerda') itemEsquerda = elemento.innerText;
+            if (idLista === 'lista-direita') itemDireita = elemento.innerText;
+
+            document.getElementById('btn-vincular').disabled = !(itemEsquerda && itemDireita);
+        }
+
+        async function vincularLogradouros() {
+            if (!confirm(`Deseja associar "${itemEsquerda}" a "${itemDireita}"?`)) return;
+
+            addMensagem(`🔗 Vinculando: ${itemEsquerda} ➔ ${itemDireita}...`);
+            
+            // Aqui buscamos o ID original da base de referência para aplicar no CIATA
+            const sqlUpdate = `
+                UPDATE CI_LOGRADOUROS 
+                SET SC_ID_LOGRADOURO = (SELECT SC_ID_LOGRADOURO FROM CN_LOGRADOUROS WHERE CN_NOM_LOGRADOURO_NORM = '${itemDireita}' LIMIT 1)
+                WHERE CI_NOM_LOGRADOURO_NORM = '${itemEsquerda}' AND COD_MUNICIPIO = '${projetoAtual.codigo}'`;
+
+            const res = await buscarSQL(sqlUpdate);
+            addMensagem(`✅ Vinculação concluída no banco.`, "ok");
+            
+            // Reset e Recarregar
+            itemEsquerda = null;
+            itemDireita = null;
+            document.getElementById('btn-vincular').disabled = true;
+            carregarDados();
+        }
+
+        function filtrar(lado) {
+            const input = document.getElementById(`busca-${lado}`);
+            const filter = input.value.toUpperCase();
+            const ul = document.getElementById(`lista-${lado}`);
+            const li = ul.getElementsByTagName('li');
+
+            for (let i = 0; i < li.length; i++) {
+                let txtValue = li[i].textContent || li[i].innerText;
+                li[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+
+        function addMensagem(texto, tipo) {
+            const consoleEl = document.getElementById("console-mensagens");
+            const div = document.createElement("div");
+            div.style.color = tipo === "erro" ? "#ff5555" : tipo === "ok" ? "#55ff55" : "#0f0";
+            div.innerText = `> ${texto}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+    </script>
+</body>
+</html>
