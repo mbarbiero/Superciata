@@ -1,347 +1,165 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
-    <title>SuperCIATA - Coletor e Monitor OSM</title>
+    <title>SuperCIATA - Coletor Otimizado</title>
     <style>
-        :root {
-            --primary: #2c3e50;
-            --success: #27ae60;
-            --error: #e74c3c;
-            --info: #2980b9;
-            --warning: #f39c12;
-            --bg: #f4f7f6;
-            --terminal: #1a1a1a;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1000px;
-        }
-
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: var(--primary);
-            margin: 0 0 15px 0;
-            border-bottom: 2px solid var(--info);
-            padding-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 1.2rem;
-        }
-
-        /* Alerta de Lentidão */
-        .alerta-servico {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ffeeba;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-weight: 500;
-        }
-
-        /* Painel de Estatísticas */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-box {
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            color: white;
-        }
-
-        .stat-total { background: var(--primary); }
-        .stat-coletado { background: var(--success); }
-        .stat-pendente { background: var(--warning); }
-
-        .stat-value { display: block; font-size: 1.8rem; font-weight: bold; }
-        .stat-label { font-size: 0.75rem; text-transform: uppercase; opacity: 0.9; }
-
-        /* Ações */
-        .btn-lote {
-            width: 100%;
-            background: var(--success);
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: 0.3s;
-            font-size: 1rem;
-            margin-bottom: 20px;
-        }
-
-        .btn-lote:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* Tabela */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        th {
-            background: #f8f9fa;
-            text-align: left;
-            padding: 12px;
-            color: var(--primary);
-            border-bottom: 2px solid #ddd;
-        }
-
-        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
-
-        .tag-osm {
-            background: #e1f5fe;
-            color: #0277bd;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        #console-mensagens {
-            background: var(--terminal);
-            color: #0f0;
-            font-family: 'Consolas', monospace;
-            padding: 15px;
-            border-radius: 8px;
-            height: 180px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-            line-height: 1.4;
-        }
+        :root { --bg: #f8f9fa; --primary: #2c3e50; --success: #27ae60; --danger: #e74c3c; --terminal: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .header { border-bottom: 3px solid #3498db; margin-bottom: 20px; }
+        .btn { width: 48%; padding: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-start { background: var(--success); color: white; }
+        .btn-stop { background: var(--danger); color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .monitor { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff; }
+        .card h4 { margin: 0 0 10px 0; color: #666; font-size: 0.8rem; text-transform: uppercase; }
+        .terminal { background: var(--terminal); color: #00ff00; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; height: 250px; overflow-y: auto; font-size: 0.85rem; line-height: 1.5; }
+        .log-match { color: #f1c40f; font-weight: bold; }
+        .log-info { color: #5dade2; }
     </style>
 </head>
-
 <body>
 
-    <div class="container">
-        <div class="alerta-servico">
-            <span style="font-size: 1.5rem;">⏳</span>
-            <div>
-                <strong>Aviso de Processamento:</strong> A coleta via OpenStreetMap respeita um intervalo de segurança de 30-60s por item. 
-                O sistema processará em lotes de 10 unidades para garantir a estabilidade.
-            </div>
-        </div>
+<div class="container">
+    <div class="header">
+        <h2>SuperCIATA - Coleta Slim (Capanema)</h2>
+        <p>Estratégia: Gravação apenas de nomes e IDs (Sem JSON pesado).</p>
+    </div>
 
+    <div style="display:flex; justify-content: space-between;">
+        <button id="btn-start" class="btn btn-start" onclick="motor(true)">🚀 Iniciar Coleta</button>
+        <button id="btn-stop" class="btn btn-stop" onclick="motor(false)" disabled>⏹️ Parar</button>
+    </div>
+
+    <div class="monitor">
         <div class="card">
-            <h2>Coletor de Geometria OSM</h2>
-            <p id="info-projeto" style="font-size: 0.9rem; color: #666; margin-bottom: 20px;"></p>
-
-            <button id="btn-iniciar" class="btn-lote" onclick="processarLote()">
-                🚀 Iniciar Próximo Lote (10 Consultas)
-            </button>
-
-            <div class="stats-grid">
-                <div class="stat-box stat-total">
-                    <span class="stat-value" id="stat-total">0</span>
-                    <span class="stat-label">Total de Logradouros</span>
-                </div>
-                <div class="stat-box stat-coletado">
-                    <span class="stat-value" id="stat-coletado">0</span>
-                    <span class="stat-label">Já Coletados</span>
-                </div>
-                <div class="stat-box stat-pendente">
-                    <span class="stat-value" id="stat-pendente">0</span>
-                    <span class="stat-label">Pendentes</span>
-                </div>
-            </div>
-
-            <div style="max-height: 300px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>CN_NOM_LOGRADOURO</th>
-                            <th>OSM_NOM_LOGRADOURO</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabela-corpo"></tbody>
-                </table>
-            </div>
+            <h4>📍 Face Municipal</h4>
+            <div id="view-cn">Pronto...</div>
         </div>
-
-        <div id="console-mensagens">
-            > Monitor pronto. Aguardando comando de lote...
+        <div class="card">
+            <h4>🌍 Resultado OSM</h4>
+            <div id="view-osm">Pronto...</div>
         </div>
     </div>
 
-    <script>
-        const projetoAtual = JSON.parse(localStorage.getItem('sc2_projeto')) || {};
-        let processandoLote = false;
+    <div id="terminal" class="terminal">> Aguardando comando...</div>
+</div>
 
-        window.onload = () => {
-            if (!projetoAtual.codigo) {
-                addMensagem("⚠️ Erro: Nenhum município selecionado no Dashboard.", "erro");
-                document.getElementById('btn-iniciar').disabled = true;
-                return;
-            }
-            document.getElementById('info-projeto').innerText = `📍 Projeto Ativo: ${projetoAtual.nome} (${projetoAtual.codigo})`;
-            atualizarEstatisticas();
-        };
+<script>
+    const API_SQL = 'https://superciata.smuu.com.br:21079/sc2_/executa_sql';
+    const COD_MUN = "4104501";
+    let rodando = false;
+    let faceAtual = null;
 
-        async function processarLote() {
-            if (processandoLote) return;
-            processandoLote = true;
-            
-            const btn = document.getElementById('btn-iniciar');
-            btn.disabled = true;
-            addMensagem("🎬 Iniciando processamento de lote (10 itens)...", "ok");
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-            for (let i = 1; i <= 10; i++) {
-                btn.innerText = `⏳ Processando ${i} de 10...`;
-                
-                // 1. Busca a próxima face prioritária
-                const face = await buscarProximaFace();
-                if (!face) {
-                    addMensagem("🏁 Não há mais logradouros pendentes para este município.", "ok");
-                    break;
-                }
+    function log(msg, classe = '') {
+        const t = document.getElementById('terminal');
+        const time = new Date().toLocaleTimeString();
+        t.innerHTML += `<div class="${classe}">[${time}] ${msg}</div>`;
+        t.scrollTop = t.scrollHeight;
+    }
 
-                addMensagem(`[${i}/10] Consultando: ${face.CN_NOM_LOGRADOURO}`);
-
-                // 2. Realiza a coleta (Fase 1 e 2)
-                await executarColetaOSM(face);
-
-                // 3. Atualiza interface e estatísticas a cada sucesso
-                await atualizarEstatisticas();
-
-                // 4. Pausa de segurança (30 a 60s) exceto no último item do lote
-                if (i < 10) {
-                    const pausa = Math.floor(Math.random() * (45000 - 30000) + 30000);
-                    addMensagem(`😴 Respeitando política da API... Pausa de ${pausa/1000}s`);
-                    await new Promise(r => setTimeout(r, pausa));
-                }
-            }
-
-            btn.disabled = false;
-            btn.innerText = "🚀 Iniciar Próximo Lote (10 Consultas)";
-            processandoLote = false;
-            addMensagem("✅ Lote finalizado. Tela atualizada.", "ok");
-        }
-
-        async function buscarProximaFace() {
-            const sql = `
-                SELECT f.SC_ID_LOGRADOURO, f.NOM_LOGRADOURO as CN_NOM_LOGRADOURO, f.COD_MUNICIPIO, 
-                       ST_X(f.CENTROIDE) as lon, ST_Y(f.CENTROIDE) as lat
-                FROM CN_FACES f
-                LEFT JOIN OSM_CONSULTAS o ON f.SC_ID_LOGRADOURO = o.SC_ID_LOGRADOURO
-                WHERE o.SC_ID_LOGRADOURO IS NULL AND f.SC_ID_LOGRADOURO IS NOT NULL
-                AND f.COD_MUNICIPIO = '${projetoAtual.codigo}'
-                ORDER BY f.QTD_PONTOS DESC LIMIT 1`;
-            const res = await executarSQL(sql);
-            return res.length > 0 ? res[0] : null;
-        }
-
-        async function executarColetaOSM(face) {
-            try {
-                // FASE 1: Buscar nome no OSM
-                const query1 = `[out:json];way(around:10,${face.lat},${face.lon})["highway"];out tags;`;
-                const res1 = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query1)}`).then(r => r.json());
-                
-                let osmNome = null;
-                if (res1.elements && res1.elements.length > 0) {
-                    const el = res1.elements.find(e => e.tags && e.tags.name);
-                    osmNome = el ? el.tags.name : null;
-                }
-
-                if (osmNome) {
-                    // FASE 2: Geometria Completa
-                    const query2 = `[out:json];area["br:ibge:code"="${face.COD_MUNICIPIO}"]->.a;(way["name"="${osmNome}"](area.a););(._;>;);out body;`;
-                    const res2 = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query2)}`).then(r => r.json());
-
-                    // Gravação no Banco
-                    const sqlInsert = `INSERT INTO OSM_CONSULTAS (SC_ID_LOGRADOURO, CN_NOM_LOGRADOURO, OSM_NOM_LOGRADOURO, RESPOSTA_OSM) 
-                                       VALUES ('${face.SC_ID_LOGRADOURO}', '${face.CN_NOM_LOGRADOURO}', '${osmNome}', '${JSON.stringify(res2).replace(/'/g, "''")}')`;
-                    await executarSQL(sqlInsert);
-                    addMensagem(`💾 Gravado: ${osmNome}`, "ok");
-                } else {
-                    addMensagem(`⚠️ Não localizado no OSM: ${face.CN_NOM_LOGRADOURO}`, "erro");
-                }
-            } catch (e) {
-                addMensagem(`❌ Erro técnico: ${e.message}`, "erro");
-            }
-        }
-
-        async function atualizarEstatisticas() {
-            const sqlStats = `
-                SELECT 
-                    (SELECT COUNT(DISTINCT SC_ID_LOGRADOURO) FROM CN_FACES WHERE COD_MUNICIPIO = '${projetoAtual.codigo}') as total,
-                    (SELECT COUNT(*) FROM OSM_CONSULTAS o JOIN CN_FACES f ON o.SC_ID_LOGRADOURO = f.SC_ID_LOGRADOURO WHERE f.COD_MUNICIPIO = '${projetoAtual.codigo}') as coletados`;
-            
-            const stats = await executarSQL(sqlStats);
-            if (stats.length > 0) {
-                document.getElementById('stat-total').innerText = stats[0].total;
-                document.getElementById('stat-coletado').innerText = stats[0].coletados;
-                document.getElementById('stat-pendente').innerText = stats[0].total - stats[0].coletados;
-            }
-
-            const sqlLista = `
-                SELECT o.SC_ID_LOGRADOURO, o.CN_NOM_LOGRADOURO, o.OSM_NOM_LOGRADOURO 
-                FROM OSM_CONSULTAS o 
-                JOIN CN_FACES f ON o.SC_ID_LOGRADOURO = f.SC_ID_LOGRADOURO
-                WHERE f.COD_MUNICIPIO = '${projetoAtual.codigo}'
-                ORDER BY o.DATA_CONSULTA DESC LIMIT 5`;
-            const lista = await executarSQL(sqlLista);
-            
-            const corpo = document.getElementById('tabela-corpo');
-            corpo.innerHTML = '';
-            lista.forEach(d => {
-                corpo.innerHTML += `<tr><td>${d.SC_ID_LOGRADOURO}</td><td>${d.CN_NOM_LOGRADOURO}</td><td><span class="tag-osm">${d.OSM_NOM_LOGRADOURO}</span></td><td>✅</td></tr>`;
+    async function querySQL(sql) {
+        try {
+            const res = await fetch(API_SQL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'direto', sql: sql })
             });
+            const text = await res.text();
+            return JSON.parse(text);
+        } catch (e) {
+            console.error("Erro SQL:", e);
+            return { sucesso: false, erro: e.message };
         }
+    }
 
-        async function executarSQL(sql) {
+    async function buscarPendente() {
+        const sql = `
+            SELECT f.SC_ID_LOGRADOURO, f.NOM_LOGRADOURO, 
+            ROUND(ST_X(f.CENTROIDE), 8) as lon, ROUND(ST_Y(f.CENTROIDE), 8) as lat 
+            FROM CN_FACES f
+            LEFT JOIN OSM_CONSULTAS o ON f.SC_ID_LOGRADOURO = o.SC_ID_LOGRADOURO
+            WHERE (o.SC_ID_LOGRADOURO IS NULL 
+                OR o.OSM_NOM_LOGRADOURO = 'NÃO ENCONTRADO'
+            )
+            AND f.COD_MUNICIPIO = '${COD_MUN}'
+            ORDER BY f.QTD_PONTOS DESC LIMIT 1`;
+        const data = await querySQL(sql);
+        return (data.sucesso && data.dados.length > 0) ? data.dados[0] : null;
+    }
+
+    async function salvar(face, nomeOSM, idOSM) {
+        // Grava apenas os campos necessários. O campo RESPOSTA_OSM_JSON agora leva apenas o ID do OSM para referência.
+        const sql = `
+            INSERT INTO OSM_CONSULTAS (SC_ID_LOGRADOURO, CN_NOM_LOGRADOURO, OSM_NOM_LOGRADOURO, COD_MUNICIPIO, RESPOSTA_OSM_JSON)
+            VALUES (
+                '${face.SC_ID_LOGRADOURO}', 
+                '${face.NOM_LOGRADOURO.replace(/'/g, "''")}', 
+                '${nomeOSM.replace(/'/g, "''")}', 
+                '${COD_MUN}', 
+                '${idOSM || "NULL"}' 
+            )
+            ON DUPLICATE KEY UPDATE 
+                OSM_NOM_LOGRADOURO = VALUES(OSM_NOM_LOGRADOURO),
+                RESPOSTA_OSM_JSON = VALUES(RESPOSTA_OSM_JSON),
+                DATA_CONSULTA = CURRENT_TIMESTAMP`;
+        return await querySQL(sql);
+    }
+
+    function motor(status) {
+        rodando = status;
+        document.getElementById('btn-start').disabled = status;
+        document.getElementById('btn-stop').disabled = !status;
+        if (status) iniciar();
+    }
+
+    async function iniciar() {
+        log("Motor iniciado...", "log-info");
+        while (rodando) {
+            if (!faceAtual) faceAtual = await buscarPendente();
+            if (!faceAtual) { log("🏁 Fim do lote."); break; }
+
+            document.getElementById('view-cn').innerHTML = `<b>${faceAtual.SC_ID_LOGRADOURO}</b><br>${faceAtual.NOM_LOGRADOURO}`;
+            
             try {
-                const res = await fetch('https://superciata.smuu.com.br:21079/sc2_/executa_sql', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tipo: 'direto', sql: sql })
-                });
-                const data = await res.json();
-                return data.sucesso ? (data.dados || []) : [];
-            } catch (e) { return []; }
-        }
+                const url = `https://overpass-api.de/api/interpreter?data=[out:json];way(around:10,${faceAtual.lat},${faceAtual.lon})["highway"];out tags;`;
+                const resOSM = await fetch(url);
 
-        function addMensagem(texto, tipo) {
-            const consoleEl = document.getElementById("console-mensagens");
-            const div = document.createElement("div");
-            div.style.color = tipo === "erro" ? "#ff5555" : tipo === "ok" ? "#55ff55" : "#0f0";
-            div.innerText = `> ${texto}`;
-            consoleEl.appendChild(div);
-            consoleEl.scrollTop = consoleEl.scrollHeight;
+                if (resOSM.status === 429 || resOSM.status === 529) {
+                    log("🛑 Rate Limit/Servidor Ocupado. Pausa de 2 min.", "log-match");
+                    await sleep(120000); continue;
+                }
+
+                const dataOSM = await resOSM.json();
+                const via = dataOSM.elements?.find(e => e.tags && e.tags.name);
+                const nomeOSM = via ? via.tags.name : "NÃO ENCONTRADO";
+                const idOSM = via ? via.id : null;
+
+                document.getElementById('view-osm').innerHTML = `<b>OSM:</b> ${nomeOSM}`;
+
+                const save = await salvar(faceAtual, nomeOSM, idOSM);
+                if (save.sucesso) {
+                    const statusMsg = nomeOSM !== "NÃO ENCONTRADO" ? `✨ ENCONTRADO: ${nomeOSM}` : `⚪ Sem dados no OSM`;
+                    log(statusMsg, nomeOSM !== "NÃO ENCONTRADO" ? 'log-match' : '');
+                    faceAtual = null; // Próximo
+                    
+                    const pausa = Math.floor(Math.random() * (40000 - 20000) + 20000);
+                    log(`😴 Espera: ${pausa/1000}s...`);
+                    await sleep(pausa);
+                }
+            } catch (err) {
+                log(`❌ Erro Rede: ${err.message}. Tentando mesma face em 30s...`);
+                await sleep(30000);
+            }
+            if (!rodando) break;
         }
-    </script>
+        motor(false);
+    }
+</script>
+
 </body>
 </html>

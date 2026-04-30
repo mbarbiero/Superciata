@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - SuperCIATA</title>
+    <style>
+        :root {
+            --bg: #f4f7f9;
+            --primary: #2c3e50;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --accent: #3498db;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        
+        h2 { color: var(--primary); margin-bottom: 5px; }
+        p { color: #666; margin-bottom: 25px; font-size: 0.9rem; }
+
+        .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; color: white; font-size: 1rem; }
+        
+        .btn-start { background: var(--success); }
+        .btn-start:hover { background: #219150; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); }
+        
+        .btn-stop { background: var(--danger); }
+        .btn-stop:hover { background: #c0392b; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3); }
+
+        .btn-status { background: var(--accent); width: 100%; margin-top: 10px; }
+
+        .status-frame { width: 100%; height: 250px; border: 1px solid #ddd; border-radius: 8px; margin-top: 20px; background: #fafafa; }
+        .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 20px; }
+        .loading { display: none; margin-top: 10px; font-size: 0.8rem; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>SuperCIATA Server</h2>
+    <p>Gestão de Coleta OSM (Município: 4104501)</p>
+    
+    <div class="btn-group">
+        <button class="btn-start" onclick="comando('iniciar_coleta')">🚀 INICIAR</button>
+        <button class="btn-stop" onclick="comando('parar_coleta')">⏹️ PARAR</button>
+    </div>
+
+    <button class="btn-status" onclick="atualizarIframe()">🔄 Atualizar Logs</button>
+    <div id="loader" class="loading">Enviando comando ao servidor...</div>
+
+    <iframe id="monitor" src="https://superciata.smuu.com.br:21079/sc2_/osm/status_coleta" class="status-frame"></iframe>
+</div>
+
+<script>
+    const BASE_URL = 'https://superciata.smuu.com.br:21079/sc2_/osm/'; // Se este HTML estiver no mesmo servidor/porta, deixe vazio.
+
+    async function comando(rota) {
+        const loader = document.getElementById('loader');
+        loader.style.display = 'block';
+        
+        try {
+            const response = await fetch(`${BASE_URL}${rota}`);
+            const texto = await response.text();
+            alert(`Servidor diz: ${texto}`);
+            
+            // Aguarda 10 segundos e atualiza o log para ver a mudança
+            setTimeout(atualizarIframe, 10000);
+        } catch (error) {
+            alert('Erro ao conectar com o servidor: ' + error.message);
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    function atualizarIframe() {
+        const iframe = document.getElementById('monitor');
+        iframe.src = iframe.src; // Força o recarregamento do iframe
+    }
+
+    // Atualiza o monitor automaticamente a cada 30 segundos neste painel também
+    setInterval(atualizarIframe, 30000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,186 @@
+:root {
+    --super-dark: #003380;   
+    --super-light: #0088cc;  
+    --bg: #f0f4f8;
+    --text: #2c3e50;
+    --terminal: #1a1a1a;
+    --white: #ffffff;
+    --border: #e1e8ed;
+    --hover-bg: #f0f7ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 15px;
+    display: flex;
+    flex-direction: column; /* Garante o empilhamento vertical correto */
+    align-items: center;
+    color: var(--text);
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+}
+
+/* --- Cabeçalho --- */
+.top-bar {
+    min-height: 25px; 
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 15px;
+}
+
+.btn-voltar {
+    text-decoration: none;
+    color: var(--super-dark);
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer; /* Mouse de mãozinha */
+    transition: 0.2s;
+}
+
+.btn-voltar:hover {
+    color: var(--super-light);
+    transform: translateX(-3px);
+}
+
+.header-logo {
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.header-logo img {
+    max-width: 220px;
+    height: auto;
+}
+
+.subtitle {
+    text-align: center;
+    color: var(--super-light);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 25px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* --- Cards e Inputs --- */
+.card {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 15px;
+    border-top: 4px solid var(--super-dark);
+}
+
+h2 {
+    color: var(--super-dark);
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+select, input[type="file"] {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    cursor: pointer; /* Mouse de mãozinha nos seletores */
+}
+
+/* --- Grid de Menu --- */
+.grid-menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* O "BOTÃO" REAL */
+.menu-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 15px 20px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer; /* MÃOZINHA AQUI */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Efeito de interatividade ao passar o mouse */
+.menu-item:hover {
+    border-color: var(--super-light);
+    background-color: var(--hover-bg);
+    transform: translateY(-3px); /* Levanta o botão */
+    box-shadow: 0 6px 12px rgba(0, 51, 128, 0.12); /* Sombra mais profunda */
+}
+
+/* Efeito de clique (ao pressionar) */
+.menu-item:active {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 51, 128, 0.1);
+}
+
+.icon-box {
+    background: #f0f7ff;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 1.6rem;
+    transition: 0.2s;
+}
+
+.menu-item:hover .icon-box {
+    background: var(--white);
+    transform: scale(1.1); /* Ícone aumenta levemente */
+}
+
+.menu-content h3 {
+    margin: 0;
+    color: var(--super-dark);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.menu-content p {
+    color: #6c757d;
+    font-size: 0.78rem;
+    margin: 3px 0 0 0;
+}
+
+/* --- Console --- */
+#console-mensagens {
+    margin-top: 15px;
+    padding: 12px 15px;
+    background: var(--terminal);
+    color: #b3ffb3;
+    font-family: 'Consolas', monospace;
+    border-radius: 8px;
+    max-height: 80px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    border: 1px solid #333;
+}

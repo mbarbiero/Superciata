@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperCIATA - Gerar Bases</title>
+    <link rel="stylesheet" href="estilo.css">
+    
+    <style>
+        /* Ajustes de Layout para o Cabeçalho */
+        .header-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            align-items: center;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-center img {
+            height: 50px;
+            margin-bottom: 5px;
+        }
+
+        /* Área de Processamento */
+        .process-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid var(--super-light, #0088cc);
+        }
+
+        .progress-container {
+            background-color: #eee;
+            border-radius: 10px;
+            margin: 20px 0;
+            height: 20px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background-color: var(--super-light, #0088cc);
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .log-container {
+            background: #1a1a1a;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            padding: 15px;
+            border-radius: 6px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            border: 1px solid #333;
+            margin-top: 20px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: #ffeaa7; color: #d6a010; }
+        .status-running { background: #81ecec; color: #00b894; }
+        .status-complete { background: #55ff5544; color: #2ecc71; }
+
+        .btn-start {
+            background-color: var(--super-light, #0088cc);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .btn-start:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" style="max-width: 900px;">
+        
+        <header class="header-container">
+            <div style="text-align: left;">
+                <a href="index.html" class="btn-voltar" style="text-decoration: none; padding: 8px 15px;">◀ VOLTAR</a>
+            </div>
+            
+            <div class="header-center">
+                <img src="imagens/Logo SuperCIATA.png" alt="SuperCIATA Logo">
+                <div class="subtitle">Espacialização de Lotes Urbanos</div>
+            </div>
+
+            <div style="visibility: hidden;"><a class="btn-voltar">◀ VOLTAR</a></div>
+        </header>
+
+        <div class="process-card">
+            <h2 style="color: var(--super-dark); margin-top: 0;">🚀 Processamento de Bases</h2>
+            <p id="projeto-info" style="font-weight: bold; color: #666;">📍 Município: Carregando...</p>
+
+            <div style="margin: 20px 0; text-align: center;">
+                <span id="current-task" class="status-badge status-pending">Aguardando Início</span>
+            </div>
+
+            <div class="progress-container">
+                <div id="progresso" class="progress-bar"></div>
+            </div>
+
+            <button id="btn-processar" class="btn-start" onclick="iniciarProcessamento()">Iniciar Geração de Bases</button>
+
+            <div id="log-processo" class="log-container">
+                > Sistema pronto. Clique em "Iniciar" para começar o lote de scripts SQL.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const projetoAtual = JSON.parse(localStorage.getItem('sc2_projeto'));
+        
+        // LISTA DE SCRIPTS SQL PARA EXECUÇÃO EM LOTE
+        const listaScripts = [
+            'CI_FACES_Preenche.sql',
+            'CI_QUADRAS_Preenche.sql',
+            'SC_QUADRAS_Preenche.sql',
+            'SC_FACES_Preenche.sql'
+        ];
+
+        window.onload = () => {
+            if (projetoAtual && projetoAtual.nome) {
+                document.getElementById('projeto-info').innerText = `📍 Município: ${projetoAtual.nome} (${projetoAtual.codigo})`;
+            } else {
+                addLog("⚠️ Erro: Nenhum projeto selecionado. Volte ao painel.", "erro");
+                document.getElementById('btn-processar').disabled = true;
+            }
+        };
+
+        async function iniciarProcessamento() {
+            const btn = document.getElementById('btn-processar');
+            const progBar = document.getElementById('progresso');
+            const badge = document.getElementById('current-task');
+            
+            btn.disabled = true;
+            badge.className = "status-badge status-running";
+            badge.innerText = "Processando...";
+            
+            addLog(`🚀 Iniciando lote de ${listaScripts.length} scripts para o município ${projetoAtual.codigo}...`);
+
+            for (let i = 0; i < listaScripts.length; i++) {
+                const script = listaScripts[i];
+                const percent = ((i + 1) / listaScripts.length) * 100;
+
+                addLog(`⚙️ Executando: ${script}...`);
+                
+                try {
+                    const response = await fetch('https://superciata.smuu.com.br:21079/sc2_/executa_sql', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tipo: 'arquivo',
+                            arquivo: script,
+                            parametros: { COD_MUNICIPIO: projetoAtual.codigo }
+                        })
+                    });
+
+                    const res = await response.json();
+
+                    if (res.sucesso) {
+                        addLog(`✅ ${script} finalizado com sucesso.`, "ok");
+                    } else {
+                        addLog(`❌ Erro em ${script}: ${res.erro}`, "erro");
+                        pararProcessamento("Erro técnico detectado.");
+                        return;
+                    }
+                } catch (error) {
+                    addLog(`❌ Falha de rede ao executar ${script}`, "erro");
+                    pararProcessamento("Falha de conexão.");
+                    return;
+                }
+
+                progBar.style.width = `${percent}%`;
+            }
+
+            badge.className = "status-badge status-complete";
+            badge.innerText = "Concluído";
+            addLog("🏁 Processamento de bases finalizado com sucesso!", "ok");
+        }
+
+        function pararProcessamento(msg) {
+            const badge = document.getElementById('current-task');
+            badge.className = "status-badge status-pending";
+            badge.innerText = "Interrompido";
+            addLog(`⚠️ Processamento interrompido: ${msg}`, "erro");
+        }
+
+        function addLog(texto, tipo) {
+            const logEl = document.getElementById("log-processo");
+            const div = document.createElement("div");
+            div.style.marginBottom = "5px";
+            
+            if (tipo === "erro") div.style.color = "#ff8787";
+            else if (tipo === "ok") div.style.color = "#b3ffb3";
+            else div.style.color = "#0f0";
+
+            div.innerText = `> ${texto}`;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+    </script>
+</body>
+</html>

@@ -903,3 +903,61 @@ app.post("/superciata/carrega_arqZip", upload.single("arqZip"), async (req, res)
     res.json({ sucesso: false, mensagem: err.message, });
   }
 });
+
+// 🔹 Rotas para consulta ao OSM
+// 🔹 Rotas para consulta ao OSM
+// 🔹 Rotas para consulta ao OSM
+// Configuração do BD smuu.com.br
+const dbConfig = {
+  host: 'mysql.smuu.com.br',
+  user: 'smuu_add1',
+  password: 'SmuuBd1',
+  database: 'smuu',
+  port: 3306,
+};
+
+// Rota para disparar o lote
+const MotorOSM = require('./osm'); // Importa o arquivo acima
+// Instancia o motor
+const motor = new MotorOSM(dbConfig);
+
+// ROTA PARA INICIAR A COLETA VIA NAVEGADOR (OPCIONAL)
+app.get('/sc2_/osm/iniciar_coleta', (req, res) => {
+  motor.executar(); // Inicia em background (não precisa de await aqui para não travar o browser)
+  res.send("Motor de coleta OSM iniciado no servidor.");
+});
+
+// ROTA PARA PARAR
+app.get('/sc2_/osm/parar_coleta', (req, res) => {
+  motor.parar();
+  res.send("Solicitação de parada enviada ao motor.");
+});
+
+// ROTA PARA MONITORAR O ANDAMENTO
+app.get('/sc2_/osm/status_coleta', (req, res) => {
+  const status = motor.getStatus();
+
+  // Retorna um HTML simples para visualização rápida no navegador
+  let html = `
+        <html>
+        <head>
+            <title>Monitor SuperCIATA</title>
+            <meta http-equiv="refresh" content="5"> <style>
+                body { font-family: monospace; background: #ffffff; color: #010f01; padding: 20px; }
+                .ativo { color: #fff; background: green; padding: 2px 5px; }
+                .parado { color: #fff; background: red; padding: 2px 5px; }
+                hr { border: 0; border-top: 1px solid #333; }
+            </style>
+        </head>
+        <body>
+            <h2>Status do Motor: <span class="${status.ativo ? 'ativo' : 'parado'}">${status.ativo ? 'RODANDO' : 'PARADO'}</span></h2>
+            <p>Município: 4104501 (Capanema)</p>
+            <hr>
+            <h3>Últimos 50 eventos:</h3>
+            ${status.historico.map(l => `<div>${l}</div>`).join('')}
+        </body>
+        </html>
+    `;
+  res.send(html);
+});
+

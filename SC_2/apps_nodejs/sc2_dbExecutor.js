@@ -12,7 +12,7 @@ function splitComandosSQL(sql) {
     if (typeof sql !== 'string') {
         console.error("❌ ERRO CRÍTICO: splitComandosSQL recebeu algo que não é string!");
         // Tenta converter para string para não travar, mas avisa o erro
-        sql = String(sql || ''); 
+        sql = String(sql || '');
     }
 
     const regex = /;(?=(?:(?:[^"']*["']){2})*[^"']*$)/g;
@@ -46,7 +46,7 @@ function parseSQL(sql) {
 
 async function executa_sql(sqlContent, nomeProcedimento = 'SC2_Direto') {
     //console.log(`[LOG] Iniciando executa_sql (${nomeProcedimento})`);
-    
+
     // LOG DE DEPURAÇÃO 2
     //console.log("DEBUG: Conteúdo original em executa_sql:", typeof sqlContent);
 
@@ -73,6 +73,58 @@ async function executa_arquivo_sql(nomeArquivo, valores = {}, nomeProcedimento =
     return await processar_execucao(sqlContent, nomeProcedimento);
 }
 
+
+async function processar_execucao(sqlContent, nomeProcedimento) {
+    let connection;
+    try {
+        connection = await mysql.createConnection({
+            ...config.db,
+            multipleStatements: false,
+            flags: ['+LOCAL_FILES'],
+            infileStreamFactory: (filePath) => fs.createReadStream(filePath)
+        });
+
+        const comandos = splitComandosSQL(sqlContent);
+        const resumoFinal = [];
+        let dadosRetorno = []; // Variável para armazenar resultados de SELECT
+
+        for (let i = 0; i < comandos.length; i++) {
+            const sql = comandos[i];
+            console.log('--------------------');
+            console.log(sql);
+            const info = parseSQL(sql);
+            const start = Date.now();
+
+            const [result] = await connection.query(sql);
+            const duration = Date.now() - start;
+
+            // LÓGICA DE RETORNO DE DADOS
+            if (Array.isArray(result)) {
+                // Se for um SELECT, armazenamos os dados para enviar ao front-end
+                dadosRetorno = result;
+                resumoFinal.push({ passo: i + 1, ...info, registros: result.length, duration });
+            } else {
+                // Se for INSERT/UPDATE/DELETE
+                resumoFinal.push({ passo: i + 1, ...info, registros: result.affectedRows || 0, duration });
+            }
+        }
+
+        // Retornamos 'sucesso', 'detalhes' (logs) e os 'dados' (linhas do SELECT)
+        return {
+            sucesso: true,
+            detalhes: resumoFinal,
+            dados: dadosRetorno
+        };
+
+    } catch (err) {
+        console.error("❌ Erro em processar_execucao:", err.message);
+        throw err;
+    } finally {
+        if (connection) await connection.end(); // Certifique-se de fechar a conexão
+    }
+}
+
+/*
 async function processar_execucao(sqlContent, nomeProcedimento) {
     let connection;
     try {
@@ -114,5 +166,5 @@ async function processar_execucao(sqlContent, nomeProcedimento) {
         //if (connection) await connection.end();
     }
 }
-
+*/
 module.exports = { executa_sql, executa_arquivo_sql };

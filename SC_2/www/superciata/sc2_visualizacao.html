@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperCIATA - Visualização Geográfica</title>
+    <link rel="stylesheet" href="estilo.css">
+    <style>
+        /* Ajuste para ocupar o máximo da tela após remover o console */
+        .container-mapa {
+            width: 100%;
+            /* Agora utiliza quase toda a altura da viewport menos o cabeçalho */
+            height: calc(100vh - 200px); 
+            min-height: 500px;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .map-controls {
+            padding: 12px;
+            display: flex;
+            gap: 12px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .btn-camada {
+            text-decoration: none;
+            color: var(--super-dark);
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 8px 15px;
+            background: #f0f7ff;
+            border: 1px solid #d0e7ff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-camada:hover {
+            background: var(--super-light);
+            color: white;
+            border-color: var(--super-light);
+        }
+
+        #projeto-info {
+            margin-left: auto; /* Empurra a info do projeto para a direita */
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--super-light);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" style="max-width: 98%;"> 
+        <div class="top-bar">
+            <a href="index.html" class="btn-voltar">◀ VOLTAR AO PAINEL</a>
+        </div>
+
+        <div class="header-logo">
+            <img src="imagens/Logo SuperCIATA.png" alt="SuperCIATA Logo">
+        </div>
+
+        <div class="container-mapa">
+            <div class="map-controls">
+                <button class="btn-camada" onclick="carregarMapa('pontos_unicos')">
+                    📍 PONTOS ÚNICOS (CNEFE)
+                </button>
+                <button class="btn-camada" style="opacity: 0.5; cursor: not-allowed;">
+                    🗺️ LOTES ESPACIALIZADOS
+                </button>
+                
+                <div id="projeto-info">Aguardando projeto...</div>
+            </div>
+            
+            <iframe id="mapa-frame" src="about:blank"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Carrega o projeto do LocalStorage
+        const projetoAtual = JSON.parse(localStorage.getItem('sc2_projeto'));
+
+        window.onload = () => {
+            if (projetoAtual) {
+                document.getElementById('projeto-info').innerText = `📍 ${projetoAtual.nome} (${projetoAtual.codigo})`;
+                // Carrega automaticamente a primeira camada se houver projeto
+                carregarMapa('pontos_unicos');
+            } else {
+                document.getElementById('projeto-info').innerText = "⚠️ Nenhum projeto selecionado";
+            }
+        };
+
+        function carregarMapa(tipo) {
+            const frame = document.getElementById('mapa-frame');
+            if (!projetoAtual) return;
+
+            if (tipo === 'pontos_unicos') {
+                frame.src = `sc2_CN_PONTOS_UNICOS.html?cod_municipio=${projetoAtual.codigo}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -3,89 +3,64 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>SuperCIATA - Ajuste Manual de Logradouros</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperCIATA - Ajuste de Logradouros</title>
+    <link rel="stylesheet" href="estilo.css">
+    
     <style>
-        /* HERANÇA VISUAL DO SUPERCIATA */
-        :root {
-            --primary: #2c3e50;
-            --success: #27ae60;
-            --error: #e74c3c;
-            --info: #2980b9;
-            --warning: #f39c12;
-            --bg: #f4f7f6;
-            --terminal: #1a1a1a;
-            --selected: #d1ecf1;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1100px;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        /* Ajustes específicos de Layout para o Cabeçalho */
+        .header-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr; /* Coluna da esquerda, centro e direita */
+            align-items: center;
             margin-bottom: 20px;
+            text-align: center;
         }
 
-        h2 {
-            color: var(--primary);
-            margin: 0 0 15px 0;
-            border-bottom: 2px solid var(--warning);
-            padding-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 1.2rem;
+        .header-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        /* GRID DE AJUSTE */
+        .header-center img {
+            height: 50px;
+            margin-bottom: 5px;
+        }
+
+        /* Estilos específicos para a interface de pareamento */
         .grid-ajuste {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
-            height: 500px;
+            height: 450px;
+            margin-top: 10px;
         }
 
         .lista-container {
             display: flex;
             flex-direction: column;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border, #ddd);
             border-radius: 8px;
             background: #fff;
             overflow: hidden;
         }
 
         .lista-header {
-            background: var(--primary);
+            background: var(--super-dark, #003380);
             color: white;
             padding: 10px;
             font-weight: bold;
             font-size: 0.85rem;
-            text-align: center;
         }
 
-        .busca-box {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-
+        .busca-box { padding: 8px; border-bottom: 1px solid #eee; }
         .busca-box input {
             width: 100%;
             padding: 8px;
-            box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
         }
 
         .lista-itens {
@@ -100,82 +75,17 @@
             padding: 10px 15px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: 0.2s;
+            text-align: left;
         }
 
-        .lista-itens li:hover {
-            background: #f8f9fa;
-        }
+        .lista-itens li:hover { background: #f8f9fa; }
 
         .lista-itens li.selecionado {
-            background: var(--selected);
-            border-left: 4px solid var(--info);
+            background: #e3f2fd;
+            border-left: 4px solid var(--super-light, #0088cc);
             font-weight: bold;
-        }
-
-        /* BARRA DE AÇÕES */
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            color: white;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-        }
-
-        .btn-link {
-            background-color: var(--success);
-        }
-
-        .btn-link:disabled {
-            background-color: #ccc;
-        }
-
-        #console-mensagens {
-            margin-top: 20px;
-            padding: 15px;
-            background: var(--terminal);
-            color: #0f0;
-            font-family: 'Consolas', monospace;
-            border-radius: 6px;
-            height: 120px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-        }
-
-        .info-projeto {
-            font-size: 0.9rem;
-            color: var(--primary);
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        /* Estilo para itens já vinculados */
-        .lista-itens li.vinculado {
-            background: #e8f5e9;
-            /* Verde bem claro */
-            color: #2e7d32;
-            border-left: 4px solid var(--success);
-            cursor: default;
-        }
-
-        .btn-desvincular {
-            background-color: var(--error);
-        }
-
-        .btn-novo {
-            background-color: var(--info);
         }
 
         .actions {
@@ -184,28 +94,56 @@
             gap: 10px;
             margin-top: 15px;
         }
+
+        .info-projeto {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            color: var(--super-dark, #003380);
+        }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
+    <div class="container" style="max-width: 1100px;">
+        
+        <header class="header-container">
+            <div style="text-align: left;">
+                <a href="index.html" class="btn-voltar" style="text-decoration: none; padding: 8px 15px;">◀ VOLTAR</a>
+            </div>
+            
+            <div class="header-center">
+                <img src="imagens/Logo SuperCIATA.png" alt="SuperCIATA Logo">
+                <div class="subtitle">Espacialização de Lotes Urbanos</div>
+            </div>
+
+            <div style="visibility: hidden;"> <a class="btn-voltar">◀ VOLTAR</a>
+            </div>
+        </header>
+
         <div class="card">
-            <h2>Fase 1: Ajuste Manual de Logradouros</h2>
-            <div id="info-municipio" class="info-projeto">📍 Município: Carregando...</div>
+            <h2>Fase 2: Ajuste de Logradouros</h2>
+            
+            <div class="info-projeto">
+                <span id="info-municipio">📍 Município: Carregando...</span>
+                <span id="status-fluxo" style="color: var(--super-light, #0088cc);">Aguardando...</span>
+            </div>
 
             <div class="grid-ajuste">
                 <div class="lista-container">
-                    <div class="lista-header">LOGRADOUROS SEM ID (CIATA)</div>
+                    <div class="lista-header">PENDENTES (CIATA)</div>
                     <div class="busca-box">
-                        <input type="text" id="busca-esquerda" placeholder="Filtrar pendentes..."
+                        <input type="text" id="busca-esquerda" placeholder="Filtrar ruas sem ID..."
                             onkeyup="filtrar('esquerda')">
                     </div>
                     <ul id="lista-esquerda" class="lista-itens"></ul>
                 </div>
 
                 <div class="lista-container">
-                    <div class="lista-header">LOGRADOUROS DISPONÍVEIS (CNEFE/BASE)</div>
+                    <div class="lista-header">REFERÊNCIA (CNEFE/OSM)</div>
                     <div class="busca-box">
                         <input type="text" id="busca-direita" placeholder="Buscar correspondência..."
                             onkeyup="filtrar('direita')">
@@ -215,21 +153,22 @@
             </div>
 
             <div class="actions">
-                <button id="btn-vincular" class="btn btn-link" disabled onclick="vincularLogradouros()">
-                    Vincular
+                <button id="btn-vincular" class="btn btn-link" disabled onclick="vincularLogradouros()" 
+                    style="background-color: #27ae60; color: white;">
+                    🔗 Vincular
                 </button>
-                <button id="btn-desvincular" class="btn btn-desvincular" disabled onclick="desvincularLogradouro()">
-                    Desvincular
+                <button id="btn-desvincular" class="btn" disabled onclick="desvincularLogradouro()"
+                    style="background-color: #e74c3c; color: white;">
+                    🔓 Desvincular
                 </button>
-                <button class="btn btn-novo" onclick="incluirNovoLogradouro()">
+                <button class="btn" onclick="incluirNovoLogradouro()"
+                    style="background-color: var(--super-light, #0088cc); color: white;">
                     + Novo Logradouro
                 </button>
             </div>
         </div>
 
-        <div id="console-mensagens">
-            > Aguardando seleção de logradouros para ajuste...
-        </div>
+        <div id="console-mensagens">> Inicializando normalização de bases...</div>
     </div>
 
     <script>
@@ -237,38 +176,46 @@
         let itemEsquerda = null;
         let itemDireita = null;
 
-        window.onload = () => {
+        window.onload = async () => {
             if (!projetoAtual.codigo) {
                 addMensagem("⚠️ Nenhum projeto ativo encontrado. Volte ao início.", "erro");
                 return;
             }
-            document.getElementById('info-municipio').innerText = `📍 Município Alvo: ${projetoAtual.nome} (${projetoAtual.codigo})`;
+            document.getElementById('info-municipio').innerText = `📍 Município: ${projetoAtual.nome}`;
+            
+            // Fluxos iniciais de banco de dados
+            await Normaliza_CI_LOGRADOUROS(projetoAtual.codigo);
+            await Atualiza_CI_LOGRADOUROS(projetoAtual.codigo);
+            
             carregarDados();
         };
 
+        async function Normaliza_CI_LOGRADOUROS(cod_municipio) {
+            addMensagem("⚙️ Normalizando CI_LOGRADOUROS...");
+            try {
+                await fetch(`https://superciata.smuu.com.br:21079/superciata/normaliza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`);
+                addMensagem("✅ Normalização concluída.");
+            } catch (e) { addMensagem("❌ Erro na normalização", "erro"); }
+        }
+
+        async function Atualiza_CI_LOGRADOUROS(cod_municipio) {
+            addMensagem("⚙️ Atualizando vínculos automáticos...");
+            try {
+                await fetch(`https://superciata.smuu.com.br:21079/superciata/atualiza_CI_LOGRADOUROS?cod_municipio=${encodeURIComponent(cod_municipio)}`);
+                addMensagem("✅ Atualização concluída.");
+            } catch (e) { addMensagem("❌ Erro na atualização", "erro"); }
+        }
+
         async function carregarDados() {
-            addMensagem(`🔍 Filtrando logradouros pendentes em ${projetoAtual.nome}...`);
+            addMensagem(`🔍 Atualizando listas...`);
 
-            // Lista da Esquerda: Apenas pendentes
-            const sqlPendentes = `
-        SELECT DISTINCT CI_NOM_LOGRADOURO_NORM 
-        FROM CI_LOGRADOUROS 
-        WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' 
-          AND (SC_ID_LOGRADOURO IS NULL OR SC_ID_LOGRADOURO = '') 
-        ORDER BY CI_NOM_LOGRADOURO_NORM`;
-
-            // Lista da Direita: NOM_LOGRADOURO (ou a coluna que você definiu como padrão)
-            const sqlReferencia = `
-        SELECT DISTINCT NOM_LOGRADOURO 
-        FROM CN_LOGRADOUROS 
-        WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' 
-        ORDER BY NOM_LOGRADOURO`;
+            const sqlPendentes = `SELECT DISTINCT CI_NOM_LOGRADOURO_NORM FROM CI_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' AND (SC_ID_LOGRADOURO IS NULL OR SC_ID_LOGRADOURO = '') ORDER BY CI_NOM_LOGRADOURO_NORM`;
+            const sqlReferencia = `SELECT DISTINCT NOM_LOGRADOURO FROM CN_LOGRADOUROS WHERE COD_MUNICIPIO = '${projetoAtual.codigo}' ORDER BY NOM_LOGRADOURO`;
 
             const pendentes = await buscarSQL(sqlPendentes);
             const referencia = await buscarSQL(sqlReferencia);
 
-            // IMPORTANTE: O terceiro parâmetro deve ser IGUAL ao nome da coluna no SELECT
-            popularListaEsquerda(pendentes);
+            popularLista('lista-esquerda', pendentes, 'CI_NOM_LOGRADOURO_NORM');
             popularLista('lista-direita', referencia, 'NOM_LOGRADOURO');
         }
 
@@ -279,23 +226,18 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tipo: 'direto', sql: sql })
                 });
-
                 const result = await res.json();
-
-                if (result.sucesso) {
-                    // Acessa a nova propriedade 'dados' que criamos no dbExecutor.js
-                    return result.dados || [];
-                }
-                return [];
-            } catch (err) {
-                console.error("Erro na requisição:", err);
-                return [];
-            }
+                return result.sucesso ? (result.dados || []) : [];
+            } catch (err) { return []; }
         }
 
         function popularLista(id, dados, campo) {
             const ul = document.getElementById(id);
             ul.innerHTML = '';
+            if (dados.length === 0 && id === 'lista-esquerda') {
+                ul.innerHTML = '<li style="color: #27ae60; text-align: center; font-weight: bold;">Concluído! ✅</li>';
+                return;
+            }
             dados.forEach(d => {
                 const li = document.createElement('li');
                 li.innerText = d[campo];
@@ -304,102 +246,49 @@
             });
         }
 
-        function popularListaEsquerda(dados) {
-            const ul = document.getElementById('lista-esquerda');
-            ul.innerHTML = '';
-
-            if (dados.length === 0) {
-                addMensagem("✅ Nenhum logradouro pendente encontrado!", "ok");
-                ul.innerHTML = '<li style="color: var(--success); text-align: center;">Tudo processado!</li>';
-                return;
-            }
-
-            dados.forEach(d => {
-                const li = document.createElement('li');
-                li.innerText = d.CI_NOM_LOGRADOURO_NORM;
-
-                // Como a query só trouxe nulos, nenhum aqui está vinculado ainda
-                li.onclick = () => selecionar('lista-esquerda', li, false);
-                ul.appendChild(li);
-            });
-        }
-
-        let estaVinculado = false;
-
-        function selecionar(idLista, elemento, jaTemVinculo = false) {
-            const itens = document.querySelectorAll(`#${idLista} li`);
-            itens.forEach(i => i.classList.remove('selecionado'));
+        function selecionar(idLista, elemento) {
+            document.querySelectorAll(`#${idLista} li`).forEach(i => i.classList.remove('selecionado'));
             elemento.classList.add('selecionado');
 
-            if (idLista === 'lista-esquerda') {
-                itemEsquerda = elemento.innerText;
-                estaVinculado = jaTemVinculo;
-            }
+            if (idLista === 'lista-esquerda') itemEsquerda = elemento.innerText;
             if (idLista === 'lista-direita') itemDireita = elemento.innerText;
 
-            // Habilita Vincular apenas se o da esquerda for novo e o da direita estiver selecionado
-            document.getElementById('btn-vincular').disabled = !(itemEsquerda && itemDireita && !estaVinculado);
-
-            // Habilita Desvincular apenas se o da esquerda já tiver vínculo
-            document.getElementById('btn-desvincular').disabled = !estaVinculado;
-        }
-
-        async function desvincularLogradouro() {
-            if (!confirm(`Deseja remover o vínculo de "${itemEsquerda}"?`)) return;
-
-            const sqlUpdate = `UPDATE CI_LOGRADOUROS SET SC_ID_LOGRADOURO = NULL WHERE CI_NOM_LOGRADOURO_NORM = '${itemEsquerda}' AND COD_MUNICIPIO = '${projetoAtual.codigo}'`;
-            await buscarSQL(sqlUpdate);
-
-            addMensagem(`🔓 Logradouro "${itemEsquerda}" desvinculado.`, "ok");
-            carregarDados();
+            document.getElementById('btn-vincular').disabled = !(itemEsquerda && itemDireita);
         }
 
         async function vincularLogradouros() {
-            if (!confirm(`Deseja associar "${itemEsquerda}" a "${itemDireita}"?`)) return;
+            if (!confirm(`Vincular "${itemEsquerda}" a "${itemDireita}"?`)) return;
 
-            addMensagem(`🔗 Vinculando: ${itemEsquerda} ➔ ${itemDireita}...`);
-
-            // Aqui buscamos o ID original da base de referência para aplicar no CIATA
+            addMensagem(`🔗 Gravando vínculo...`);
             const sqlUpdate = `
                 UPDATE CI_LOGRADOUROS 
-                SET SC_ID_LOGRADOURO = (SELECT SC_ID_LOGRADOURO FROM CN_LOGRADOUROS WHERE CN_NOM_LOGRADOURO_NORM = '${itemDireita}' LIMIT 1)
+                SET SC_ID_LOGRADOURO = (SELECT SC_ID_LOGRADOURO FROM CN_LOGRADOUROS WHERE NOM_LOGRADOURO = '${itemDireita}' LIMIT 1)
                 WHERE CI_NOM_LOGRADOURO_NORM = '${itemEsquerda}' AND COD_MUNICIPIO = '${projetoAtual.codigo}'`;
 
-            const res = await buscarSQL(sqlUpdate);
-            addMensagem(`✅ Vinculação concluída no banco.`, "ok");
-
-            // Reset e Recarregar
-            itemEsquerda = null;
-            itemDireita = null;
-            document.getElementById('btn-vincular').disabled = true;
+            await buscarSQL(sqlUpdate);
+            await Atualiza_CI_LOGRADOUROS(projetoAtual.codigo);
+            
+            addMensagem(`✅ Vínculo processado.`, "ok");
+            itemEsquerda = itemDireita = null;
             carregarDados();
         }
 
         async function incluirNovoLogradouro() {
-            const novoNome = prompt("Digite o nome do NOVO logradouro (será normalizado automaticamente):");
+            const novoNome = prompt("Nome do logradouro:");
             if (!novoNome) return;
-
-            // Normalização via JS para garantir o padrão SuperCIATA
             const nomeNorm = novoNome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").trim();
-
-            addMensagem(`➕ Incluindo novo logradouro: ${nomeNorm}...`);
-
             const sqlInsert = `INSERT INTO CI_LOGRADOUROS (COD_MUNICIPIO, CI_NOM_LOGRADOURO, CI_NOM_LOGRADOURO_NORM) VALUES ('${projetoAtual.codigo}', '${novoNome.toUpperCase()}', '${nomeNorm}')`;
-
             await buscarSQL(sqlInsert);
-            addMensagem(`✅ "${nomeNorm}" incluído com sucesso.`, "ok");
+            await Normaliza_CI_LOGRADOUROS(projetoAtual.codigo);
             carregarDados();
         }
 
         function filtrar(lado) {
-            const input = document.getElementById(`busca-${lado}`);
-            const filter = input.value.toUpperCase();
-            const ul = document.getElementById(`lista-${lado}`);
-            const li = ul.getElementsByTagName('li');
-
+            const filter = document.getElementById(`busca-${lado}`).value.toUpperCase();
+            const li = document.getElementById(`lista-${lado}`).getElementsByTagName('li');
             for (let i = 0; i < li.length; i++) {
-                let txtValue = li[i].textContent || li[i].innerText;
-                li[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+                let txt = li[i].textContent || li[i].innerText;
+                li[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
 
@@ -413,5 +302,4 @@
         }
     </script>
 </body>
-
 </html>

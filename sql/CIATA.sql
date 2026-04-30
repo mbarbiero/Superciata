@@ -1,9 +1,3 @@
-SELECT * FROM smuu.CI_LOTES 
-;
-
-SELECT * FROM smuu.CI_LOGRADOUROS
-;
-
 SELECT 
 	DISTINCT 
     CONCAT(LT.COD_MUNICIPIO, NUM_QUADRA, SC_ID_LOGRADOURO) AS ID_FACE,
@@ -261,4 +255,37 @@ INNER JOIN (
 ) A ON F.ID_FACE = A.ID_FACE
 SET F.DIM_FACE = F.DIM_FACE + A.TOTAL_ADJACENTE;
 
+-- NOVA VERSÃO 
+-- ***************************************************************
+-- CI_FACES
+-- CI_FACES
+-- CI_FACES
+-- ***************************************************************    
+-- Atualizando as faces em CI_FACE
+INSERT INTO CI_FACES (
+    CI_ID_FACE, 
+    COD_MUNICIPIO, 
+    CI_ID_QUADRA, 
+    SC_ID_LOGRADOURO, 
+    QTD_LOTES, 
+    DIM_FACE
+) SELECT 
+    CONCAT(
+      LT.COD_MUNICIPIO, ";", LT.NUM_QUADRA, ";", LG.SC_ID_LOGRADOURO
+    ) AS CI_ID_FACE,
+    LT.COD_MUNICIPIO, 
+    LT.NUM_QUADRA AS CI_ID_QUADRA, 
+    LG.SC_ID_LOGRADOURO,
+    COUNT(*) AS QTD_LOTES,           -- Conta lotes existem da face
+    SUM(LT.DIM_TESTADA) AS DIM_FACE  -- Soma a testada total da face
+FROM CI_LOTES LT
+JOIN CI_LOGRADOUROS LG 
+    ON 
+		(LT.NOM_LOGRADOURO = LG.CI_NOM_LOGRADOURO)
+    AND
+		(LT.COD_MUNICIPIO = LG.COD_MUNICIPIO)
+GROUP BY 
+    LT.COD_MUNICIPIO, 
+    LT.NUM_QUADRA, 
+    LG.SC_ID_LOGRADOURO;
 

@@ -1,97 +1,153 @@
 const mysql = require('mysql2/promise');
 const axios = require('axios');
-const config = require('./sc2_config');
 
-let ocupado = false;
-let logMensagens = ["Servidor pronto para iniciar coleta."];
-
-const addLog = (msg) => {
-    const time = new Date().toLocaleTimeString();
-    logMensagens.unshift(`[${time}] ${msg}`);
-    if (logMensagens.length > 50) logMensagens.pop();
-    console.log(`[OSM_SERVICE] ${msg}`);
-};
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-async function processarLote(codigoMunicipio, quantidade = 10) {
-    if (ocupado) {
-        addLog("⚠️ Já existe um processo em execução. Aguarde.");
-        return;
+class MotorOSM {
+    constructor(dbConfig) {
+        this.dbConfig = dbConfig;
+        this.ativo = false;
+        this.COD_MUN = "4104501"; // Capanema
+        this.logs = [];
+        
+        // Servidores Overpass para rodízio
+        this.servidores = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+            'https://overpass.openstreetmap.ru/cgi/interpreter'
+        ];
+        this.serverIndex = 0;
     }
 
-    ocupado = true;
-    let connection;
+    async sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    try {
-        connection = await mysql.createConnection(config.db);
-        addLog(`🚀 Iniciando lote de ${quantidade} para o município ${codigoMunicipio}...`);
+    async log(msg, tipo = 'INFO') {
+        const entrada = `[${new Date().toLocaleTimeString()}] [${tipo}] ${msg}`;
+        console.log(entrada);
+        this.logs.unshift(entrada);
+        if (this.logs.length > 50) this.logs.pop();
+    }
 
-        for (let i = 1; i <= quantidade; i++) {
-            // Busca a próxima face pendente
-            const [faces] = await connection.query(`
-                SELECT f.SC_ID_LOGRADOURO, f.NOM_LOGRADOURO as CN_NOM_LOGRADOURO, f.COD_MUNICIPIO, 
-                       ST_X(f.CENTROIDE) as lon, ST_Y(f.CENTROIDE) as lat
-                FROM CN_FACES f
-                LEFT JOIN OSM_CONSULTAS o ON f.SC_ID_LOGRADOURO = o.SC_ID_LOGRADOURO
-                WHERE o.SC_ID_LOGRADOURO IS NULL AND f.COD_MUNICIPIO = ?
-                ORDER BY f.QTD_PONTOS DESC LIMIT 1`, [codigoMunicipio]);
+    async executar() {
+        if (this.ativo) return;
+        this.ativo = true;
+        let connection;
 
-            if (faces.length === 0) {
-                addLog("🏁 Fim dos registros: Tudo processado!");
-                break;
-            }
+        try {
+            connection = await mysql.createConnection(this.dbConfig);
+            this.log("🚀 Motor SuperCIATA Online | Modo: Rodízio de Servidores | Pausa: 30s", "SISTEMA");
 
-            const face = faces[0];
-            addLog(`ITEM ${i}/${quantidade}: ${face.CN_NOM_LOGRADOURO}`);
+            while (this.ativo) {
+                /* SQL OTIMIZADO:
+                   1. Filtra por ID_FACE para nunca repetir a mesma geometria.
+                   2. Filtra por SC_ID_LOGRADOURO para pular faces de ruas já encontradas.
+                */
+                const sqlBusca = `
+                    SELECT 
+                        f.ID_FACE, 
+                        f.SC_ID_LOGRADOURO, 
+                        f.NOM_LOGRADOURO, 
+                        ROUND(ST_X(f.CENTROIDE), 8) as lon, 
+                        ROUND(ST_Y(f.CENTROIDE), 8) as lat 
+                    FROM CN_FACES f
+                    LEFT JOIN OSM_CONSULTAS o_face ON f.ID_FACE = o_face.CN_ID_FACE
+                    WHERE f.COD_MUNICIPIO = ?
+                    AND o_face.CN_ID_FACE IS NULL 
+                    AND f.SC_ID_LOGRADOURO NOT IN (
+                        SELECT DISTINCT SC_ID_LOGRADOURO 
+                        FROM OSM_CONSULTAS 
+                        WHERE COD_MUNICIPIO = ? 
+                        AND OSM_NOM_LOGRADOURO <> 'NÃO ENCONTRADO'
+                    )
+                    ORDER BY f.QTD_PONTOS DESC LIMIT 1`;
 
-            try {
-                // FASE 1: Overpass API (Nome)
-                const q1 = `[out:json];way(around:10,${face.lat},${face.lon})["highway"];out tags;`;
-                const r1 = await axios.get(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q1)}`, { timeout: 30000 });
+                const [rows] = await connection.execute(sqlBusca, [this.COD_MUN, this.COD_MUN]);
+
+                if (rows.length === 0) {
+                    this.log("🏁 Fim da coleta: Todas as faces processadas ou logradouros mapeados.", "FIM");
+                    this.ativo = false;
+                    break;
+                }
+
+                const face = rows[0];
                 
-                const osmNome = r1.data.elements?.find(e => e.tags && e.tags.name)?.tags.name;
+                // Seleção e rotação do servidor
+                const baseUrl = this.servidores[this.serverIndex];
+                this.serverIndex = (this.serverIndex + 1) % this.servidores.length;
 
-                if (osmNome) {
-                    // FASE 2: Overpass API (Geometria completa)
-                    const q2 = `[out:json];area["br:ibge:code"="${face.COD_MUNICIPIO}"]->.a;(way["name"="${osmNome}"](area.a););(._;>;);out body;`;
-                    const r2 = await axios.get(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q2)}`, { timeout: 60000 });
+                this.log(`🔎 Analisando: "${face.NOM_LOGRADOURO}" | Face: ${face.ID_FACE} | Server: ${new URL(baseUrl).hostname}`, "BUSCA");
 
-                    await connection.query(`
-                        INSERT INTO OSM_CONSULTAS (SC_ID_LOGRADOURO, CN_NOM_LOGRADOURO, OSM_NOM_LOGRADOURO, RESPOSTA_OSM)
-                        VALUES (?, ?, ?, ?)`, 
-                        [face.SC_ID_LOGRADOURO, face.CN_NOM_LOGRADOURO, osmNome, JSON.stringify(r2.data)]
+                try {
+                    // Query Overpass com timeout de 25s
+                    const query = `[out:json][timeout:45];way(around:20,${face.lat},${face.lon})["highway"];out tags;`;
+                    const url = `${baseUrl}?data=${encodeURIComponent(query)}`;
+                    
+                    const response = await axios.get(url, { 
+                        timeout: 30000, 
+                        headers: { 'User-Agent': 'SuperCIATA-Research/3.0 (Master-UFSC)' }
+                    });
+
+                    const via = response.data.elements?.find(e => e.tags && e.tags.name);
+                    const nomeOSM = via ? via.tags.name : "NÃO ENCONTRADO";
+                    const idOSM = via ? via.id : null;
+
+                    // Gravação na nova estrutura de tabela
+                    await connection.execute(`
+                        INSERT INTO OSM_CONSULTAS 
+                        (CN_ID_FACE, SC_ID_LOGRADOURO, CN_NOM_LOGRADOURO, OSM_NOM_LOGRADOURO, COD_MUNICIPIO, RESPOSTA_OSM_JSON)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE 
+                            OSM_NOM_LOGRADOURO = VALUES(OSM_NOM_LOGRADOURO),
+                            RESPOSTA_OSM_JSON = VALUES(RESPOSTA_OSM_JSON),
+                            DATA_CONSULTA = CURRENT_TIMESTAMP`, 
+                        [
+                            face.ID_FACE, 
+                            face.SC_ID_LOGRADOURO, 
+                            face.NOM_LOGRADOURO, 
+                            nomeOSM, 
+                            this.COD_MUN, 
+                            idOSM ? String(idOSM) : null
+                        ]
                     );
-                    addLog(`✅ Salvo: ${osmNome}`);
-                } else {
-                    addLog(`❌ Nome não encontrado no raio de 10m.`);
-                }
-            } catch (err) {
-                addLog(`⚠️ Erro no item: ${err.message}`);
-                if (err.response?.status === 429) {
-                    addLog("🚫 Bloqueio Overpass (429). Aguardando 2 minutos...");
-                    await sleep(120000);
-                }
-            }
 
-            // A PAUSA CRÍTICA: 30 a 60 segundos entre cada item do lote
-            if (i < quantidade) {
-                const tempoEspera = Math.floor(Math.random() * (60000 - 30000) + 30000);
-                addLog(`😴 Aguardando ${tempoEspera/1000}s para evitar bloqueio...`);
-                await sleep(tempoEspera);
+                    if (nomeOSM !== "NÃO ENCONTRADO") {
+                        this.log(`✅ SUCESSO: "${face.NOM_LOGRADOURO}" -> "${nomeOSM}"`, "RESULTADO");
+                    } else {
+                        this.log(`⚪ VAZIO: "${face.NOM_LOGRADOURO}" sem dados no OSM`, "RESULTADO");
+                    }
+
+                    // Pausa fixa de 30 segundos
+                    await this.sleep(30000);
+
+                } catch (error) {
+                    const status = error.response ? error.response.status : null;
+                    if (status === 429 || status === 504 || status === 529) {
+                        this.log(`⚠️ Servidor ${new URL(baseUrl).hostname} instável (${status}). Pausa de 1 min...`, "AVISO");
+                        await this.sleep(60000);
+                    } else if (error.code === 'ECONNABORTED') {
+                        this.log(`⏱️ Timeout no servidor ${new URL(baseUrl).hostname}. Tentando próximo em 10s...`, "AVISO");
+                        await this.sleep(10000);
+                    } else {
+                        this.log(`❌ Erro: ${error.message}. Próxima tentativa em 30s...`, "ERRO");
+                        await this.sleep(30000);
+                    }
+                }
             }
+        } catch (err) {
+            this.log(`🔥 Erro Fatal de Conexão: ${err.message}`, "CRÍTICO");
+        } finally {
+            if (connection) await connection.end();
+            this.ativo = false;
+            this.log("Motor desligado.", "SISTEMA");
         }
-    } catch (globalErr) {
-        addLog(`🔥 Erro crítico no serviço: ${globalErr.message}`);
-    } finally {
-        ocupado = false;
-        if (connection) await connection.end();
-        addLog("🏁 Lote finalizado. Servidor liberado.");
+    }
+
+    parar() { 
+        this.ativo = false; 
+        this.log("Comando de parada recebido.", "SISTEMA");
+    }
+
+    getStatus() { 
+        return { ativo: this.ativo, historico: this.logs }; 
     }
 }
 
-module.exports = { 
-    processarLote, 
-    isOcupado: () => ocupado, 
-    getLogs: () => logMensagens 
-};
+module.exports = MotorOSM;
