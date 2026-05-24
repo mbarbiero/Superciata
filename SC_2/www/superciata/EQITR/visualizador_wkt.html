@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador Rural - SuperCIATA</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        #map { width: 100vw; height: 100vh; position: absolute; top: 0; bottom: 0; z-index: 1; }
+        
+        .control-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); width: 260px;
+        }
+        .btn-paste {
+            background-color: #0056b3; color: white; border: none; padding: 12px 15px;
+            font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-paste:hover { background-color: #004085; }
+        
+        .status-message { margin-top: 8px; font-size: 12px; color: #555; text-align: center; font-weight: 500; }
+        
+        .sentinel-panel {
+            margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;
+        }
+        .sentinel-panel label { font-size: 11px; font-weight: bold; color: #333; display: block; margin-bottom: 5px; }
+        .year-select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background: white; }
+        .btn-update-date {
+            background-color: #28a745; color: white; border: none; padding: 8px;
+            font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%;
+            margin-top: 8px;
+        }
+        .btn-update-date:hover { background-color: #218838; }
+
+        .date-info-box {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <button class="btn-paste" id="pasteBtn">📋 Colar Polígono (WKT)</button>
+        <div class="status-message" id="status">Copie o WKT e clique no botão acima.</div>
+        
+        <div class="sentinel-panel">
+            <label for="sentinelYear">📅 SÉRIE TEMPORAL SENTINEL-2:</label>
+            <select id="sentinelYear" class="year-select">
+                <option value="2024">Mosaico Anual 2024</option>
+                <option value="2023">Mosaico Anual 2023</option>
+                <option value="2022">Mosaico Anual 2022</option>
+                <option value="2021" selected>Mosaico Anual 2021</option>
+                <option value="2020">Mosaico Anual 2020</option>
+                <option value="2019">Mosaico Anual 2019</option>
+                <option value="2018">Mosaico Anual 2018</option>
+                <option value="2017">Mosaico Anual 2017</option>
+                <option value="2016">Mosaico Anual 2016</option>
+            </select>
+            <button class="btn-update-date" id="updateYearBtn">🔄 Alternar Ano do Satélite</button>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Inicializa o mapa focado no Brasil
+        const map = L.map('map').setView([-15.7801, -47.9292], 4);
+
+        // 2. Camadas Base Otimizadas
+        const googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            subdomains: ['0', '1', '2', '3'],
+            maxZoom: 20,
+            attribution: '© Google Maps'
+        }).addTo(map);
+
+        // Inicializa com o mosaico de 2021 (um dos mais completos e limpos para o Brasil rural)
+        let sentinelLayer = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg', {
+            maxZoom: 18,
+            attribution: '© Copernicus Sentinel-2 via EOX'
+        });
+
+        const baseMaps = {
+            "Google Satélite (Híbrido)": googleHybrid,
+            "Sentinel-2 (Histórico Anual)": sentinelLayer
+        };
+        L.control.layers(baseMaps, null, { collapsed: false }).addTo(map);
+
+        // 3. Legenda Dinâmica no Mapa
+        const dateControl = L.control({ position: 'bottomright' });
+        dateControl.onAdd = function () {
+            const div = L.DomUtil.create('div', 'date-info-box');
+            div.id = 'dynamicDateDisplay';
+            div.innerHTML = "🛰️ Camada: Google Satélite | Imagem: Atualizada/Dinâmica";
+            return div;
+        };
+        dateControl.addTo(map);
+
+        function updateDateOverlay(layerName, text) {
+            const display = document.getElementById('dynamicDateDisplay');
+            if (display) display.innerHTML = `🛰️ Camada: ${layerName} | Ano: ${text}`;
+        }
+
+        map.on('baselayerchange', function(e) {
+            if (e.name === "Google Satélite (Híbrido)") {
+                updateDateOverlay("Google Satélite", "Atual (Dinâmico)");
+            } else if (e.name === "Sentinel-2 (Histórico Anual)") {
+                const year = document.getElementById('sentinelYear').value;
+                updateDateOverlay("Sentinel-2", `${year} (Consolidado Livre de Nuvens)`);
+            }
+        });
+
+        let currentPolygon = null;
+
+        // 4. Parser robusto para WKT (Suporta POLYGON e POLYGON Z)
+        function parseWKT(wktString) {
+            try {
+                const regex = /\(\(([^()]+)\)\)/;
+                const matches = wktString.match(regex);
+                if (!matches) {
+                    const fallbackRegex = /\(([^()]+)\)/;
+                    const fallbackMatches = wktString.match(fallbackRegex);
+                    if (!fallbackMatches) return null;
+                    return processCoordsString(fallbackMatches[1]);
+                }
+                return processCoordsString(matches[1]);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function processCoordsString(coordStr) {
+            const points = coordStr.trim().split(',');
+            return points.map(point => {
+                const parts = point.trim().split(/\s+/);
+                const lng = parseFloat(parts[0]);
+                const lat = parseFloat(parts[1]);
+                if (!isNaN(lat) && !isNaN(lng)) return [lat, lng];
+            }).filter(coord => coord !== undefined);
+        }
+
+        // 5. Fluxo de colagem automática
+        document.getElementById('pasteBtn').addEventListener('click', async () => {
+            const statusEl = document.getElementById('status');
+            try {
+                const text = await navigator.clipboard.readText();
+                
+                if (!text || !text.toUpperCase().includes("POLYGON")) {
+                    statusEl.innerText = "❌ O texto copiado não possui uma geometria POLYGON válida.";
+                    statusEl.style.color = "#dc3545";
+                    return;
+                }
+
+                const coords = parseWKT(text);
+
+                if (coords && coords.length > 0) {
+                    if (currentPolygon) map.removeLayer(currentPolygon);
+
+                    // Amarelo âmbar para excelente destaque em copas de árvores, pastagens e solo exposto
+                    currentPolygon = L.polygon(coords, {
+                        color: '#00ffff',
+                        weight: 3,
+                        fillColor: '#00ffff',
+                        fillOpacity: 0.12
+                    }).addTo(map);
+
+                    map.fitBounds(currentPolygon.getBounds());
+                    statusEl.innerText = "✅ Área rural delimitada com sucesso!";
+                    statusEl.style.color = "#28a745";
+                } else {
+                    statusEl.innerText = "❌ Erro ao processar os vértices do polígono.";
+                    statusEl.style.color = "#dc3545";
+                }
+            } catch (err) {
+                statusEl.innerText = "❌ Clipboard bloqueado. Ative a permissão do site.";
+                statusEl.style.color = "#dc3545";
+            }
+        });
+
+        // 6. Atualização da Linha do Tempo Anual
+        document.getElementById('updateYearBtn').addEventListener('click', () => {
+            const selectedYear = document.getElementById('sentinelYear').value;
+            
+            // Define o endpoint direto para o repositório consolidado do ano escolhido
+            const newUrl = `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${selectedYear}_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg`;
+            
+            sentinelLayer.setUrl(newUrl);
+            
+            if (!map.hasLayer(sentinelLayer)) {
+                map.removeLayer(googleHybrid);
+                sentinelLayer.addTo(map);
+            }
+            
+            updateDateOverlay("Sentinel-2", `${selectedYear} (Consolidado Livre de Nuvens)`);
+            document.getElementById('status').innerText = `📅 Mudou para o Mosaico de ${selectedYear}`;
+            document.getElementById('status').style.color = "#007bff";
+        });
+    </script>
+</body>
+</html>

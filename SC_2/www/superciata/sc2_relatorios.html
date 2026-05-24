@@ -4,11 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperCIATA - Relatórios</title>
+    <title>SuperCIATA - Menu de Relatórios</title>
     <link rel="stylesheet" href="estilo.css">
     
     <style>
-        /* Ajustes de Layout para o Cabeçalho */
         .header-container {
             display: grid;
             grid-template-columns: 1fr 2fr 1fr;
@@ -28,7 +27,6 @@
             margin-bottom: 5px;
         }
 
-        /* Estilos para a seleção de relatórios */
         .grid-relatorios {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -104,48 +102,55 @@
                 <div class="subtitle">Espacialização de Lotes Urbanos</div>
             </div>
 
-            <div style="visibility: hidden;">
-                <a class="btn-voltar">◀ VOLTAR</a>
-            </div>
+            <div style="visibility: hidden;"><a class="btn-voltar">◀ VOLTAR</a></div>
         </header>
 
         <div class="info-projeto" id="display-municipio">
-            📍 Selecione um município no painel de controle
+            📍 Município: Carregando dados...
         </div>
 
         <div class="grid-relatorios">
             
-            <a href="#" class="card-relatorio" onclick="abrirRelatorio('resumo_bases')">
+            <a href="#" class="card-relatorio" onclick="abrirRelatorio('registros')">
                 <div class="icon-relatorio">📊</div>
-                <h3>Resumo Bases Importadas</h3>
+                <h3>Registros por Tabela</h3>
                 <p>Estatísticas de importação e integridade dos dados por fonte.</p>
             </a>
 
-            <a href="#" class="card-relatorio" onclick="abrirRelatorio('logradouros')">
+            <a href="#" class="card-relatorio" onclick="abrirRelatorio('logradouros_pendentes')">
                 <div class="icon-relatorio">🛣️</div>
                 <h3>Logradouros</h3>
                 <p>Relatório de pareamento, ruas confirmadas e pendências de ID.</p>
+            </a>
+
+            <a href="#" class="card-relatorio" onclick="abrirRelatorio('correlacao_quadras')">
+                <div class="icon-relatorio">🗺️</div>
+                <h3>Correlação de Quadras</h3>
+                <p>Análise de vínculo entre as quadras do cadastro municipal e a malha espacial.</p>
             </a>
 
         </div>
     </div>
 
     <script>
+        // Recupera o projeto já selecionado em index.html
         const projetoAtual = JSON.parse(localStorage.getItem('sc2_projeto'));
 
         window.onload = () => {
+            const display = document.getElementById('display-municipio');
             if (projetoAtual && projetoAtual.nome) {
-                document.getElementById('display-municipio').innerText = `📍 Município Ativo: ${projetoAtual.nome} (${projetoAtual.codigo})`;
+                display.innerText = `📍 Município Ativo: ${projetoAtual.nome} (${projetoAtual.codigo})`;
+            } else {
+                display.innerText = "⚠️ Nenhum município selecionado. Volte ao Início.";
             }
         };
 
         function abrirRelatorio(tipo) {
             if (!projetoAtual) {
-                alert("Por favor, selecione um município no Painel de Controle antes de acessar os relatórios.");
+                alert("Por favor, selecione um município na página inicial antes de acessar os relatórios.");
                 return;
             }
-
-            // Redireciona para o arquivo de relatório correspondente passando o código do município
+            // Redireciona para o relatório específico
             window.location.href = `sc2_relatorio_${tipo}.html?cod_municipio=${projetoAtual.codigo}`;
         }
     </script>
